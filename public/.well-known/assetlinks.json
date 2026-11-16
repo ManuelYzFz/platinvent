@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "cl.vtraxx.stock.twa",
+    "sha256_cert_fingerprints": ["A3:A5:6E:50:55:68:EB:07:A2:97:7E:F9:D0:BF:ED:16:47:2F:FB:D5:EA:96:86:EF:27:64:B1:E5:99:DE:F5:31"]
+  }
+}]

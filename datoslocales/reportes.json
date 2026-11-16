@@ -1,0 +1,109 @@
+{
+  "result": 0,
+  "infos": [
+    {
+      "id": 1,
+      "devIdno": "4142434445",
+      "companyId": 1,
+      "brand": "Queclink",
+      "model": "GV300",
+      "plateNumber": "616263646566",
+      "asunto": "Falla en Cámara Frontal",
+      "prioridad": "Alta",
+      "mensaje": "La cámara de video se desconecta intermitentemente.",
+      "typeError": "Cámara Desconectada / Sin Imagen",
+      "fechaHora": "2026-08-26 09:15:00"
+    },
+    {
+      "id": 2,
+      "devIdno": "550426072701",
+      "companyId": 2,
+      "brand": "Teltonika",
+      "model": "FMM920",
+      "plateNumber": "AB-123-CD",
+      "asunto": "Equipo no enciende al dar contacto",
+      "prioridad": "Media",
+      "mensaje": "Error cuando se prende, no enciende la pantalla.",
+      "typeError": "Corte de Alimentación / Sin Energía Externa",
+      "fechaHora": "2026-08-26 10:30:00"
+    },
+    {
+      "id": 3,
+      "devIdno": "4142434445",
+      "companyId": 1,
+      "brand": "Queclink",
+      "model": "GV300",
+      "plateNumber": "616263646566",
+      "asunto": "Luz Roja de Alerta en Dispositivo",
+      "prioridad": "Baja",
+      "mensaje": "Al intentar hacer algo, prende luz roja hasta que se reinicie, funciona aproximadamente 3 minutos y vuelve a dejar de funcionar y tira luz roja de nuevo.",
+      "typeError": "Pérdida de Video en Canal Principal",
+      "fechaHora": "2026-08-26 11:20:00"
+    },
+    {
+      "id": 4,
+      "devIdno": "4142434445",
+      "companyId": 1,
+      "brand": "Queclink",
+      "model": "GV300",
+      "plateNumber": "616263646566",
+      "asunto": "Falla general en sensor de video",
+      "prioridad": "Media",
+      "mensaje": "Interrupción constante de transmisión de datos.",
+      "typeError": "Cámara Desconectada / Sin Imagen",
+      "fechaHora": "2026-08-26 11:42:20"
+    },
+    {
+      "id": 5,
+      "devIdno": "550426072701",
+      "companyId": 2,
+      "brand": "Teltonika",
+      "model": "FMM920",
+      "plateNumber": "AB-123-CD",
+      "asunto": "Pérdida de Cobertura GPS",
+      "prioridad": "Alta",
+      "mensaje": "No emite señal satelital durante el trayecto.",
+      "typeError": "Falla de Señal GPS / Cobertura Satelital",
+      "fechaHora": "2026-07-15 14:20:00"
+    },
+    {
+      "id": 6,
+      "devIdno": "550426072701",
+      "companyId": 2,
+      "brand": "Teltonika",
+      "model": "FMM920",
+      "plateNumber": "AB-123-CD",
+      "asunto": "Falla de lectura SIM",
+      "prioridad": "Media",
+      "mensaje": "La tarjeta SIM no es reconocida por el módulo de datos.",
+      "typeError": "Error de SIM Card / Sin Transmisión de Datos",
+      "fechaHora": "2026-07-20 16:45:00"
+    },
+    {
+      "id": 7,
+      "devIdno": "550426072701",
+      "companyId": 2,
+      "brand": "Teltonika",
+      "model": "FMM920",
+      "plateNumber": "AB-123-CD",
+      "asunto": "falla si osi",
+      "prioridad": "Media",
+      "mensaje": "dsadadadaasdasdadas",
+      "typeError": "Otros",
+      "fechaHora": "2026-08-27 10:26:01"
+    },
+    {
+      "id": 8,
+      "devIdno": "550426072701",
+      "companyId": 2,
+      "brand": "Teltonika",
+      "model": "FMM920",
+      "plateNumber": "AB-123-CD",
+      "asunto": "problema jaja",
+      "prioridad": "Alta",
+      "mensaje": "gfgfdg",
+      "typeError": "Falla de Señal GPS / Cobertura Satelital",
+      "fechaHora": "2026-09-07 10:54:25"
+    }
+  ]
+}

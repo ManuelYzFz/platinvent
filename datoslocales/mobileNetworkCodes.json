@@ -1,0 +1,80 @@
+{
+  "country": "Chile",
+  "countryCode": "56",
+  "industry": "Telecomunicaciones",
+  "industryCode": "89",
+  "networkCodes": [
+    {
+      "mnc": "01",
+      "prefix": "895601",
+      "operator": "Entel",
+      "mainOperator": "Entel",
+      "isSecondary": false,
+      "description": "Muy común (corresponde a Entel PCS)."
+    },
+    {
+      "mnc": "09",
+      "prefix": "895609",
+      "operator": "WOM",
+      "mainOperator": "WOM",
+      "isSecondary": false,
+      "description": "Muy común."
+    },
+    {
+      "mnc": "03",
+      "prefix": "895603",
+      "operator": "Claro",
+      "mainOperator": "Claro",
+      "isSecondary": false,
+      "description": "Muy común (ClaroVTR)."
+    },
+    {
+      "mnc": "02",
+      "prefix": "895602",
+      "operator": "Movistar",
+      "mainOperator": "Movistar",
+      "isSecondary": false,
+      "description": "Muy común."
+    },
+    {
+      "mnc": "07",
+      "prefix": "895607",
+      "operator": "Movistar (Secundario)",
+      "mainOperator": "Movistar",
+      "isSecondary": true,
+      "description": "Menos común, usado a veces para líneas corporativas o marcas específicas."
+    },
+    {
+      "mnc": "04",
+      "prefix": "895604",
+      "operator": "WOM (Secundario)",
+      "mainOperator": "WOM",
+      "isSecondary": true,
+      "description": "Frecuente en lotes de chips antiguos o de banda ancha móvil."
+    },
+    {
+      "mnc": "10",
+      "prefix": "895610",
+      "operator": "Entel (Secundario)",
+      "mainOperator": "Entel",
+      "isSecondary": true,
+      "description": "Usado en ciertas series de chips específicos de datos o prepago."
+    },
+    {
+      "mnc": "08",
+      "prefix": "895608",
+      "operator": "VTR Móvil",
+      "mainOperator": "VTR Móvil",
+      "isSecondary": false,
+      "description": "Poco común (la mayoría se maneja hoy bajo las series de Claro)."
+    },
+    {
+      "mnc": "05",
+      "prefix": "895605",
+      "operator": "Nextel",
+      "mainOperator": "Nextel",
+      "isSecondary": false,
+      "description": "Obsoleto (histórico, previo a la compra que dio origen a WOM)."
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "result": 0,
+  "infos": [
+    {
+      "id": 1,
+      "name": "Cámara Desconectada / Sin Imagen",
+      "category": "DVR",
+      "deviceType": "dvr"
+    },
+    {
+      "id": 2,
+      "name": "Error de Disco / SD Card Inaccesible",
+      "category": "DVR",
+      "deviceType": "dvr"
+    },
+    {
+      "id": 3,
+      "name": "Pérdida de Video en Canal Principal",
+      "category": "DVR",
+      "deviceType": "dvr"
+    },
+    {
+      "id": 4,
+      "name": "Falla de Señal GPS / Cobertura Satelital",
+      "category": "GPS",
+      "deviceType": "gps"
+    },
+    {
+      "id": 5,
+      "name": "Corte de Alimentación / Sin Energía Externa",
+      "category": "GPS",
+      "deviceType": "gps"
+    },
+    {
+      "id": 6,
+      "name": "Error de SIM Card / Sin Transmisión de Datos",
+      "category": "GPS",
+      "deviceType": "gps"
+    },
+    {
+      "id": 7,
+      "name": "Otros",
+      "category": "GPS",
+      "deviceType": "gps"
+    },
+       {
+      "id": 8,
+      "name": "Otros",
+      "category": "DVR",
+      "deviceType": "dvr"
+    }
+  ]
+}

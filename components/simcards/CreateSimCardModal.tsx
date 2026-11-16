@@ -1,0 +1,1163 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+
+import {
+  X,
+  Camera,
+  Radio,
+  CheckCircle2,
+  AlertCircle,
+  Scan,
+  Building2,
+
+  Phone,
+  HardDrive,
+  Clock,
+  Activity,
+  FileText,
+  MapPin,
+  CreditCard,
+  Hash,
+  Calendar,
+  UploadCloud,
+  Loader2,
+} from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
+import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
+import { saveSingleOfflineSim, enqueueSyncMutation } from '@/lib/services/offlineStorage';
+import type { SimRecord } from '@/lib/types/inventory';
+import { DEFAULT_COMPANY_OPTIONS, COUNTRY_CODES, USE_LOCAL_DATA } from '@/lib/constants';
+import { MAX_LENGTHS, ICCID_MAX_LENGTH, E164_MAX_LENGTH, firstFieldError } from '@/lib/validation/inventory';
+import { formatDateTime } from '@/lib/utils/date-format';
+import {
+  normalizeICCID,
+  detectOperatorFromICCID,
+  type OperatorDetectionResult,
+  type DeviceItemOption,
+  type VehicleItemOption,
+} from '@/lib/utils/sim-utils';
+
+export {
+  normalizeICCID,
+  detectOperatorFromICCID,
+  COUNTRY_CODES,
+  type OperatorDetectionResult,
+  type DeviceItemOption,
+  type VehicleItemOption,
+};
+
+interface CreateSimCardModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: (newSim?: Record<string, unknown>) => void;
+  companiesList?: { id?: string | number; name?: string }[];
+  devicesList?: DeviceItemOption[];
+  vehiclesList?: VehicleItemOption[];
+}
+
+
+export default function CreateSimCardModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  companiesList = [],
+  devicesList = [],
+  vehiclesList = [],
+}: CreateSimCardModalProps) {
+  const { t } = useTranslation();
+
+  // Estados del Formulario
+  const [simCardCode, setSimCardCode] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>(''); // Empresa
+  const [customCompanyName, setCustomCompanyName] = useState<string>('');
+  const [countryCode, setCountryCode] = useState<string>('+56');
+  const [phoneNumber, setPhoneNumber] = useState<string>('9');
+  const [selectedDevIDNO, setSelectedDevIDNO] = useState<string>(''); // Dispositivo asignado
+
+  // Nuevos campos solicitados
+  const [plan, setPlan] = useState<string>('Plan M2M Data');
+  const [status, setStatus] = useState<number>(1); // 1: Habilitado, 2: No habilitado
+  const [city, setCity] = useState<string>('');
+  const [cardMerchant, setCardMerchant] = useState<string>('');
+  const [msisdn, setMsisdn] = useState<string>('');
+  const [endTime, setEndTime] = useState<string>('');
+
+  // Lista local fallback de dispositivos y vehículos si las props no han cargado aún
+  const [internalDevices, setInternalDevices] = useState<DeviceItemOption[]>([]);
+  const [internalVehicles, setInternalVehicles] = useState<VehicleItemOption[]>([]);
+
+  // Reloj en tiempo real para la fecha/hora de registro
+  const [liveTimestamp, setLiveTimestamp] = useState<string>(() => formatDateTime());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateClock = () => {
+      setLiveTimestamp(formatDateTime());
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
+  // Estados del Escáner y Alertas
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [scanSuccess, setScanSuccess] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isAnalyzingFile, setIsAnalyzingFile] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const html5QrcodeRef = useRef<any>(null);
+  const cancelCameraStartRef = useRef<boolean>(false);
+  const isStoppingCameraRef = useRef<boolean>(false);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
+  const stopMediaTracks = () => {
+    const readerElement = document.getElementById('simcard-reader');
+    if (readerElement) {
+      const videos = readerElement.querySelectorAll('video');
+      videos.forEach((video) => {
+        const stream = video.srcObject as MediaStream | null;
+        if (stream && typeof stream.getTracks === 'function') {
+          stream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch {}
+          });
+        }
+        video.srcObject = null;
+      });
+    }
+  };
+
+  // Evitar bucle infinito de peticiones usando un ref de control estricto
+  const fetchedFallbackRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      fetchedFallbackRef.current = false;
+      return;
+    }
+
+    if (fetchedFallbackRef.current) return;
+    fetchedFallbackRef.current = true;
+
+    // Solo consultar API si el componente padre no pasó las listas
+    if (!devicesList || devicesList.length === 0) {
+      fetch('/api/local-devices')
+        .then((res) => res.json())
+        .then((data) => {
+          const list = Array.isArray(data.infos) ? data.infos : [];
+          setInternalDevices(list);
+        })
+        .catch(() => {});
+    }
+
+    if (!vehiclesList || vehiclesList.length === 0) {
+      fetch('/api/local-vehicles')
+        .then((res) => res.json())
+        .then((data) => {
+          const list = Array.isArray(data.infos) ? data.infos : [];
+          setInternalVehicles(list);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, devicesList, vehiclesList]);
+
+
+  // Listas efectivas combinando props y fallback local
+  const effectiveDevices = useMemo(() => {
+    return devicesList && devicesList.length > 0 ? devicesList : internalDevices;
+  }, [devicesList, internalDevices]);
+
+  const effectiveVehicles = useMemo(() => {
+    return vehiclesList && vehiclesList.length > 0 ? vehiclesList : internalVehicles;
+  }, [vehiclesList, internalVehicles]);
+
+  // Detección de Operador (WOM, Entel, etc.)
+  const detectedOperator = useMemo(() => detectOperatorFromICCID(simCardCode), [simCardCode]);
+
+  // Filtrar dispositivos dinámicamente según la compañía seleccionada
+  // REQUISITO: SOLAMENTE mostrar dispositivos que NO tengan vehículos asociados
+  const filteredDevicesForCompany = useMemo(() => {
+    if (!companyName || companyName === 'Libre' || companyName === 'Sin Asignar') {
+      return [];
+    }
+    const compLower = companyName.trim().toLowerCase();
+
+    // Encontrar matched companyId si existe
+    const matchedCompObj = companiesList.find(
+      (c) => c.name?.trim().toLowerCase() === compLower
+    );
+    const targetCompId = matchedCompObj?.id !== undefined ? String(matchedCompObj.id) : null;
+
+    return effectiveDevices.filter((dev) => {
+      // 1. Coincidencia por compañía (directa por nombre o por ID)
+      const devCompName = String(dev.companyName ?? '').trim().toLowerCase();
+      const devCompId = String(dev.companyId ?? dev.companyID ?? '');
+      const matchesCompany =
+        (devCompName && devCompName === compLower) ||
+        (targetCompId && devCompId === targetCompId);
+
+      if (!matchesCompany) return false;
+
+      // 2. REQUISITO: SOLAMENTE dispositivos que NO tengan vehículos asociados
+      const devId = String(dev.devIDNO ?? dev.devIdno ?? dev.id ?? '').trim();
+      if (!devId) return false;
+
+      // 2a. Si el dispositivo ya tiene vehículo/patente asignada directamente
+      const hasDevVehiId = Boolean(
+        (dev.vehiIdno && String(dev.vehiIdno).trim() !== '') ||
+        (dev.vehiIDNO && String(dev.vehiIDNO).trim() !== '') ||
+        (dev.vid && String(dev.vid).trim() !== '')
+      );
+      if (hasDevVehiId) return false;
+
+      // 2b. Si algún vehículo en la lista de vehículos contiene este dispositivo en devList
+      if (effectiveVehicles && effectiveVehicles.length > 0) {
+        const isLinkedToVehicle = effectiveVehicles.some((v) => {
+          const devList = Array.isArray(v.devList) ? v.devList : (Array.isArray(v.dl) ? v.dl : []);
+          return devList.some((d) => String(d.name ?? d.id ?? d.serialID).trim() === devId);
+        });
+        if (isLinkedToVehicle) return false;
+      }
+
+      return true;
+    });
+  }, [companyName, effectiveDevices, effectiveVehicles, companiesList]);
+
+  const availableCompanies = useMemo(() => {
+    // Lista fija sólo en modo local; con BD se usan las empresas de la tabla companies
+    const set = new Set<string>(USE_LOCAL_DATA ? DEFAULT_COMPANY_OPTIONS : []);
+    if (companiesList) {
+      companiesList.forEach((c) => { if (c.name) set.add(c.name); });
+    }
+    effectiveDevices.forEach((d) => {
+      const name = String(d.companyName ?? '').trim();
+      if (name && name !== 'Sin Asignar' && name !== 'Libre') set.add(name);
+    });
+    effectiveVehicles.forEach((v) => {
+      const name = String(v.com?.name ?? v.companyName ?? '').trim();
+      if (name && name !== 'Sin Asignar' && name !== 'Libre') set.add(name);
+    });
+    return Array.from(set);
+  }, [companiesList, effectiveDevices, effectiveVehicles]);
+
+
+  // Al cambiar la compañía, resetear el dispositivo asignado
+  const handleCompanyChange = (newComp: string) => {
+    setCompanyName(newComp);
+    if (newComp !== '__REGISTER_NEW_COMPANY__') {
+      setCustomCompanyName('');
+    }
+    setSelectedDevIDNO('');
+  };
+
+  // Manejar cambios en el campo de texto del teléfono
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value.replace(/\D/g, ''); // Solo dígitos
+
+    if (countryCode === '+56') {
+      if (rawVal === '') {
+        setPhoneNumber('');
+      } else {
+        setPhoneNumber(rawVal.slice(0, 9)); // Máximo 9 dígitos
+      }
+    } else {
+      setPhoneNumber(rawVal.slice(0, 12));
+    }
+  };
+
+  const stopCamera = useCallback(async () => {
+    cancelCameraStartRef.current = true;
+    if (isStoppingCameraRef.current) return;
+    isStoppingCameraRef.current = true;
+
+    const instance = html5QrcodeRef.current;
+    html5QrcodeRef.current = null;
+
+    if (instance) {
+      try {
+        if (instance.isScanning) {
+          await instance.stop();
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes('already under transition') && !msg.includes('not running')) {
+          console.warn('Error al detener la cámara:', err);
+        }
+      }
+
+      try {
+        instance.clear();
+      } catch {
+        // ignore clear errors if container is unmounted
+      }
+    }
+
+    stopMediaTracks();
+
+    const readerElement = document.getElementById('simcard-reader');
+    if (readerElement) {
+      readerElement.innerHTML = '';
+    }
+
+    isStoppingCameraRef.current = false;
+    setIsScanning(false);
+  }, []);
+
+  // Bloquear scroll de fondo mientras el modal está abierto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Limpiar escáner al abrir/cerrar modal
+  useEffect(() => {
+    if (!isOpen || !isScanning) {
+      void stopCamera();
+    }
+  }, [isOpen, isScanning, stopCamera]);
+
+
+  const startCamera = async () => {
+    cancelCameraStartRef.current = false;
+    setCameraError(null);
+    setScanSuccess(false);
+    setIsScanning(true);
+
+    setTimeout(async () => {
+      if (cancelCameraStartRef.current) return;
+
+      try {
+        const readerElement = document.getElementById('simcard-reader');
+        if (!readerElement || cancelCameraStartRef.current) return;
+
+        stopMediaTracks();
+        readerElement.innerHTML = '';
+
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        if (cancelCameraStartRef.current) return;
+
+        if (html5QrcodeRef.current) {
+          try {
+            if (html5QrcodeRef.current.isScanning) {
+              await html5QrcodeRef.current.stop();
+            }
+            html5QrcodeRef.current.clear();
+          } catch {
+            // ignore
+          }
+          html5QrcodeRef.current = null;
+        }
+
+        const html5Qrcode = new Html5Qrcode('simcard-reader', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.DATA_MATRIX,
+          ],
+          verbose: false,
+        });
+
+        if (cancelCameraStartRef.current) {
+          try { html5Qrcode.clear(); } catch {}
+          return;
+        }
+
+        html5QrcodeRef.current = html5Qrcode;
+
+        const config = {
+          fps: 20,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const width = Math.floor(Math.min(viewfinderWidth * 0.88, 400));
+            const height = Math.floor(Math.min(viewfinderHeight * 0.75, 210));
+            return { width, height };
+          },
+          aspectRatio: 1.4,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
+        };
+
+        const onScanSuccess = (decodedText: string) => {
+          const normalized = normalizeICCID(decodedText.trim());
+          setSimCardCode(normalized);
+          setScanSuccess(true);
+          setIsScanning(false);
+          void stopCamera();
+        };
+
+        try {
+          await html5Qrcode.start(
+            { facingMode: 'environment' },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        } catch (envErr) {
+          if (cancelCameraStartRef.current) return;
+          console.warn('Fallo facingMode environment en CreateSimCardModal, reintentando facingMode user:', envErr);
+          await html5Qrcode.start(
+            { facingMode: 'user' },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        }
+
+        if (cancelCameraStartRef.current) {
+          try {
+            if (html5Qrcode.isScanning) {
+              await html5Qrcode.stop();
+            }
+            html5Qrcode.clear();
+          } catch {}
+          stopMediaTracks();
+          if (html5QrcodeRef.current === html5Qrcode) {
+            html5QrcodeRef.current = null;
+          }
+        }
+      } catch (err: unknown) {
+        if (!cancelCameraStartRef.current) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (!msg.includes('already under transition')) {
+            console.error('Error al iniciar escáner de cámara:', err);
+            setCameraError('No se pudo acceder a la transmisión de cámara (se requiere HTTPS o permisos). Puedes usar el botón "Tomar foto" o ingresar el código manualmente.');
+          }
+          setIsScanning(false);
+          void stopCamera();
+        }
+      }
+    }, 150);
+  };
+
+  // Escanear foto capturada o archivo de imagen
+  const handleFileScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAnalyzingFile(true);
+    setCameraError(null);
+
+    try {
+      const rawText = await decodeBarcodeFromImage(file, 'create-simcard-file-helper');
+      const normalized = normalizeICCID(rawText.trim());
+      setSimCardCode(normalized);
+      setScanSuccess(true);
+      setIsScanning(false);
+      void stopCamera();
+    } catch (err) {
+      console.warn('No se pudo decodificar la imagen de SIM en CreateSimCardModal:', err);
+      setCameraError('No se detectó un código legible en la imagen. Intenta tomarla más de cerca con buena iluminación o escribe el ICCID.');
+    } finally {
+      setIsAnalyzingFile(false);
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    const fieldError = firstFieldError([
+      ['iccid', simCardCode],
+      ['phone', phoneNumber.trim() ? `${countryCode}${phoneNumber}` : ''],
+      ['planName', plan],
+      ['city', city],
+      ['cardMerchant', cardMerchant],
+      ['msisdn', msisdn],
+      ['companyName', customCompanyName],
+    ]);
+    if (fieldError) {
+      setErrorMessage(fieldError);
+      return;
+    }
+
+    if (!simCardCode.trim()) {
+      setErrorMessage('Por favor ingresa o escanea el código simCard.');
+      return;
+    }
+
+    const cleanPhoneDigits = phoneNumber.trim().replace(/\D/g, '');
+    if (!cleanPhoneDigits) {
+      setErrorMessage('Por favor ingresa el No. SIM.');
+      return;
+    }
+    if (countryCode === '+56' && cleanPhoneDigits.length < 9) {
+      setErrorMessage('El No. SIM para Chile debe tener 9 dígitos (Ej: 912345678).');
+      return;
+    }
+
+    let finalCompanyName = companyName.trim();
+    if (companyName === '__REGISTER_NEW_COMPANY__') {
+      const trimmed = customCompanyName.trim();
+      if (!trimmed) {
+        setErrorMessage(t('error_compania_requerida') || 'Por favor ingresa el nombre de la nueva Empresa.');
+        return;
+      }
+      finalCompanyName = trimmed;
+      void fetch('/api/local-companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: finalCompanyName }),
+      }).catch(() => {});
+    } else if (!finalCompanyName) {
+      setErrorMessage(t('error_compania_requerida') || 'Por favor selecciona la Empresa.');
+      return;
+    }
+
+    if (!status) {
+      setErrorMessage('Por favor selecciona el Estado.');
+      return;
+    }
+
+    const fullFormattedCardNum = `${countryCode}${cleanPhoneDigits}`;
+    const finalDevIDNO = selectedDevIDNO.trim();
+    const isInstalledVal = finalDevIDNO !== '' ? 1 : 0;
+    const nowTimestamp = Date.now();
+    const detectedOp = detectOperatorFromICCID(simCardCode.trim());
+
+    let matchedCompanyId = 1;
+    if (companiesList.length > 0) {
+      const matchComp = companiesList.find(
+        (c) => c.name?.toLowerCase() === finalCompanyName.toLowerCase()
+      );
+      if (matchComp && matchComp.id !== undefined && matchComp.id !== null) {
+        matchedCompanyId = Number(matchComp.id) || 1;
+      }
+    }
+
+    const simPayload: SimRecord = {
+      cardNum: fullFormattedCardNum,
+      status: Number(status),
+      registrationTime: nowTimestamp,
+      remark: null,
+      updateTime: null,
+      install: isInstalledVal,
+      devIDNO: finalDevIDNO || null,
+      vehiIDNO: null,
+      companyID: matchedCompanyId,
+      simCard: simCardCode.trim() || null,
+      companyName: finalCompanyName,
+      serviceProvider: detectedOp ? (detectedOp.mainOperator || detectedOp.operator) : 'Entel',
+      planName: plan.trim() || null,
+      city: city.trim() || null,
+      operator: null,
+      devId: null,
+      oldDevId: null,
+      endTime: endTime ? (new Date(endTime).getTime() || endTime) : null,
+      cardMerchant: cardMerchant.trim() || null,
+      msisdn: msisdn.trim() || null,
+    };
+
+    const resetFormAndClose = () => {
+      setTimeout(() => {
+        setSubmittedMessage(null);
+        setSimCardCode('');
+        setPhoneNumber('9');
+        setCompanyName('');
+        setCustomCompanyName('');
+        setSelectedDevIDNO('');
+        setPlan('Plan M2M Data');
+        setStatus(1);
+        setCity('');
+        setCardMerchant('');
+        setMsisdn('');
+        setEndTime('');
+        onClose();
+      }, 1200);
+    };
+
+    setIsSubmitting(true);
+
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+      try {
+        await saveSingleOfflineSim(simPayload);
+        await enqueueSyncMutation('sim', 'create', { sim: simPayload });
+        setSubmittedMessage(`¡SIM Card "${simCardCode.trim()}" guardada offline! Se sincronizará al conectar.`);
+        if (onSuccess) onSuccess(simPayload);
+        resetFormAndClose();
+      } catch (err) {
+        setErrorMessage('Error al guardar localmente en el dispositivo.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/local-sims', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sim: simPayload }),
+      });
+
+      const data = await response.json();
+      if (response.status === 400) {
+        // Datos rechazados por validación: mostrar el motivo y no respaldar offline
+        setErrorMessage(data?.error || 'Datos inválidos: no se pudo guardar.');
+        return;
+      }
+      if (!response.ok) {
+        // Si el servidor dio error, respaldar offline
+        await saveSingleOfflineSim(simPayload);
+        await enqueueSyncMutation('sim', 'create', { sim: simPayload });
+        setSubmittedMessage(`¡SIM Card guardada localmente! (Pendiente de sincronizar)`);
+        if (onSuccess) onSuccess(simPayload);
+        resetFormAndClose();
+        return;
+      }
+
+      const savedSim = data.sim || simPayload;
+      await saveSingleOfflineSim(savedSim);
+      setSubmittedMessage(`¡SIM Card "${simCardCode.trim()}" registrada exitosamente!`);
+
+      if (onSuccess) onSuccess(savedSim);
+      resetFormAndClose();
+    } catch (err) {
+      // Si falla la red a mitad de la petición, guardar localmente
+      try {
+        await saveSingleOfflineSim(simPayload);
+        await enqueueSyncMutation('sim', 'create', { sim: simPayload });
+        setSubmittedMessage(`¡SIM Card guardada offline! Se sincronizará al reconectar.`);
+        if (onSuccess) onSuccess(simPayload);
+        resetFormAndClose();
+      } catch {
+        setErrorMessage(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-200">
+      <div className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl border border-[#e8e9ed] overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] notranslate" translate="no">
+        
+        {/* Cabecera del Modal */}
+        <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-white border-b border-[#e8e9ed]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <Radio className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-[#3a435d] tracking-wide">
+                {t('modal_agregar_simcard_titulo') || t('agregar_simcard')}
+              </h2>
+              <p className="text-xs sm:text-sm text-[#5c647b]">
+                {t('modal_agregar_simcard_desc') || 'Registra una nueva tarjeta SIM en el inventario'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              void stopCamera();
+              onClose();
+            }}
+            type="button"
+            className="p-2 rounded-lg text-gray-400 hover:text-[#3a435d] hover:bg-[#e8e9ed]/50 transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
+          >
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </div>
+
+
+        {/* Contenido con Scroll */}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-5">
+          
+          {/* Alertas */}
+          {errorMessage && (
+            <div className="p-3.5 sm:p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {submittedMessage && (
+            <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
+              <span>{submittedMessage}</span>
+            </div>
+          )}
+
+          {/* Sección de Escaneo con Cámara */}
+          <div className="rounded-xl border border-[#e8e9ed] bg-[#f8f9fc] p-4 sm:p-5 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Scan className="w-4 h-4 sm:w-5 sm:h-5 text-[#00acee]" />
+                <span className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider">
+                  Escáner de Cámara
+                </span>
+              </div>
+              {!isScanning ? (
+                <button
+                  type="button"
+                  onClick={() => void startCamera()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00acee] hover:bg-[#0098d4] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>{t('activar_camara')}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsScanning(false);
+                    void stopCamera();
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  <span>{t('detener_camara')}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Hidden inputs para captura nativa o galería */}
+            <input
+              type="file"
+              ref={cameraInputRef}
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileScan}
+              className="hidden"
+            />
+            <input
+              type="file"
+              ref={galleryInputRef}
+              accept="image/*"
+              onChange={handleFileScan}
+              className="hidden"
+            />
+
+            {/* Visor de Cámara */}
+            {isScanning && (
+              <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 bg-black min-h-65 md:min-h-75 flex items-center justify-center">
+                <div id="simcard-reader" className="w-full h-full min-h-65 md:min-h-75" />
+              </div>
+            )}
+
+            {isAnalyzingFile && (
+              <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 animate-pulse">
+                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                <span>{t('analizando_codigo_foto')}</span>
+              </div>
+            )}
+
+            {/* BOTONES ADICIONALES: TOMAR FOTO CON CÁMARA O SUBIR DE GALERÍA */}
+            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isAnalyzingFile}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              >
+                <Camera className="w-4 h-4 text-indigo-200" />
+                <span>{t('tomar_foto_camara')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={isAnalyzingFile}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 shadow-2xs"
+                title="Abrir galería de fotos"
+              >
+                <UploadCloud className="w-4 h-4 text-indigo-600" />
+                <span>{t('buscar_imagen_galeria')}</span>
+              </button>
+            </div>
+
+            {cameraError && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>{cameraError}</span>
+              </div>
+            )}
+
+            {/* Badge de Escaneo Exitoso */}
+            {scanSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in zoom-in-95">
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
+                <span>¡Código escaneado correctamente y cargado en simCard!</span>
+              </div>
+            )}
+          </div>
+
+          {/* Formulario con los Campos Reestructurados */}
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            
+            {/* Campo 1: simCard */}
+            <div>
+              <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Radio className="w-4 h-4 text-emerald-600" />
+                simCard <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={simCardCode}
+                  maxLength={ICCID_MAX_LENGTH}
+                  inputMode="numeric"
+                  onChange={(e) => setSimCardCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Ej: 89560900000127126850"
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs"
+                />
+                {simCardCode && (
+                  <button
+                    type="button"
+                    onClick={() => setSimCardCode('')}
+                    className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Indicador exclusivo de Compañía de Red */}
+              {detectedOperator && (
+                <div className="mt-2 flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#3a435d] animate-in fade-in">
+                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Compañía de red:</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                    <Radio className="w-3.5 h-3.5 text-blue-500" />
+                    {detectedOperator.operator}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Fila 2: No. SIM y Empresa */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* No. SIM */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                  No. SIM <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="w-32 px-3 py-3 bg-[#f8f9fc] border border-[#e8e9ed] rounded-xl text-sm font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 transition-all cursor-pointer shrink-0"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.flag} {c.code}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      required
+                      value={phoneNumber}
+                      onChange={handlePhoneNumberChange}
+                      placeholder={countryCode === '+56' ? '912345678' : '123456789'}
+                      className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs pr-10"
+                    />
+                    {phoneNumber && (
+                      <button
+                        type="button"
+                        onClick={() => setPhoneNumber('')}
+                        className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        title="Borrar número"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-[#5c647b]">
+                  {countryCode === '+56'
+                    ? 'Para Chile (🇨🇱 +56) se requiere el prefijo 9 (Ej: 912345678).'
+                    : `Ingresa el número telefónico para ${countryCode}.`}
+                </p>
+              </div>
+
+              {/* Empresa */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-[#00acee]" />
+                  Empresa <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={companyName}
+                  onChange={(e) => handleCompanyChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all cursor-pointer shadow-2xs"
+                >
+                  <option value="">Selecciona una Empresa *</option>
+                  <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-blue-600">
+                    {t('registrar_empresa_sim_opcion') || '+ Registrar Empresa...'}
+                  </option>
+                  {availableCompanies.map((comp) => (
+                    <option key={comp} value={comp}>
+                      {comp}
+                    </option>
+                  ))}
+                </select>
+                {companyName === '__REGISTER_NEW_COMPANY__' && (
+                  <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0c1c2e] border border-blue-200 dark:border-[#1e3a5f] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        {t('nombre_nueva_empresa') || 'Registrar nueva empresa:'} <span className="text-red-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCompanyName('');
+                          setCustomCompanyName('');
+                        }}
+                        className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                      >
+                        {t('cancelar') || 'Cancelar'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={customCompanyName}
+                      maxLength={MAX_LENGTHS.company.name}
+                      onChange={(e) => setCustomCompanyName(e.target.value)}
+                      placeholder="Ej: Transportes del Norte SpA"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-blue-300 dark:border-blue-700 rounded-lg text-sm font-semibold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                {!companyName && (
+                  <p className="text-xs text-gray-400 mt-1 italic">
+                    Campo obligatorio. Selecciona la empresa a la que pertenece la SIM.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Fila 3: Estado y Tipo de Plan */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Estado (Combobox: 1 habilitado, 2 no habilitado) */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  Estado <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={status}
+                  onChange={(e) => setStatus(Number(e.target.value))}
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-emerald-500 transition-all cursor-pointer shadow-2xs"
+                >
+                  <option value={1}>1 - Habilitado</option>
+                  <option value={2}>2 - No habilitado</option>
+                </select>
+              </div>
+
+              {/* Tipo de Plan */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Tipo de Plan
+                </label>
+                <input
+                  type="text"
+                  value={plan}
+                  maxLength={MAX_LENGTHS.simcard.plan_name}
+                  onChange={(e) => setPlan(e.target.value)}
+                  placeholder="Ej: Plan M2M Data"
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-blue-500 transition-all shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* Fila 4: Ciudad de Emisión y Card Merchant */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Ciudad de Emisión */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-amber-600" />
+                  Ciudad de Emisión
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  maxLength={MAX_LENGTHS.simcard.city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Ej: Santiago"
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-amber-500 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* Card Merchant */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-purple-600" />
+                  Card Merchant
+                </label>
+                <input
+                  type="text"
+                  value={cardMerchant}
+                  maxLength={MAX_LENGTHS.simcard.card_merchant}
+                  onChange={(e) => setCardMerchant(e.target.value)}
+                  placeholder="Ej: Giesecke+Devrient / Idemia"
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-purple-500 transition-all shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* Fila 5: MSISDN y Expiration Date */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* MSISDN */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Hash className="w-4 h-4 text-indigo-600" />
+                  MSISDN
+                </label>
+                <input
+                  type="text"
+                  value={msisdn}
+                  maxLength={E164_MAX_LENGTH}
+                  inputMode="numeric"
+                  onChange={(e) => setMsisdn(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Ej: 56912345678"
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-semibold text-[#3a435d] focus:outline-none focus:border-indigo-500 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* Expiration Date (Calendario) */}
+              <div>
+                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-rose-600" />
+                  Expiration Date
+                </label>
+                <input
+                  type="date"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-rose-500 transition-all cursor-pointer shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* Dispositivo Asignado - Filtrado dinámicamente: SOLO sin vehículos asociados */}
+            <div>
+              <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <HardDrive className="w-4 h-4 text-emerald-600" />
+                Dispositivo Asignado
+              </label>
+              <select
+                disabled={!companyName}
+                value={selectedDevIDNO}
+                onChange={(e) => setSelectedDevIDNO(e.target.value)}
+                className={`w-full px-4 py-3 border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold transition-all font-mono shadow-2xs ${
+                  !companyName
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-[#3a435d] focus:outline-none focus:border-emerald-500 cursor-pointer'
+                }`}
+              >
+                <option value="">
+                  {!companyName ? 'Selecciona una Empresa primero' : 'Sin Dispositivo / Libre'}
+                </option>
+                {companyName &&
+                  filteredDevicesForCompany.map((dev, idx) => {
+                    const devId = String(dev.devIDNO ?? dev.devIdno ?? dev.id ?? '');
+                    if (!devId) return null;
+                    const brandModel = [dev.brand, dev.model].filter(Boolean).join(' ');
+                    const brandText = brandModel ? ` - ${brandModel}` : '';
+                    return (
+                      <option key={`dev-opt-${devId}-${idx}`} value={devId}>
+                        {devId}{brandText} (Disponible / Sin Vehículo)
+                      </option>
+                    );
+                  })}
+              </select>
+
+              {!companyName ? (
+                <p className="text-xs text-gray-400 mt-1 italic">
+                  Selecciona una Empresa arriba para ver sus dispositivos disponibles sin vehículo.
+                </p>
+              ) : filteredDevicesForCompany.length === 0 ? (
+                <p className="text-xs text-amber-700 mt-1 font-medium">
+                  No hay dispositivos disponibles sin vehículo asociados a {companyName}. Se guardará sin dispositivo.
+                </p>
+              ) : (
+                <p className="text-xs text-emerald-700 mt-1 font-medium">
+                  Mostrando {filteredDevicesForCompany.length} dispositivo(s) disponibles sin vehículo para {companyName}.
+                </p>
+              )}
+
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="font-semibold text-[#5c647b]">Estado de asignación:</span>
+                <span
+                  className={`font-extrabold px-2.5 py-1 rounded border ${
+                    selectedDevIDNO
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                  }`}
+                >
+                  {selectedDevIDNO ? '1 (Instalado en Dispositivo)' : '0 (Libre / No Instalado)'}
+                </span>
+              </div>
+            </div>
+
+            {/* Fecha de Registro */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-[#f8f9fc] border border-[#e8e9ed] flex items-center justify-between text-xs sm:text-sm text-[#5c647b]">
+              <div className="flex items-center gap-2 font-medium">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#00acee]" />
+                <span>Fecha de Registro:</span>
+              </div>
+              <span className="font-mono font-bold text-[#3a435d] bg-white px-3 py-1.5 rounded-md border border-[#e8e9ed]">
+                {liveTimestamp || 'Timestamp Unix (ms)'}
+              </span>
+            </div>
+
+            {/* Pie de Página del Modal */}
+            <div className="pt-4 border-t border-[#e8e9ed] flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  void stopCamera();
+                  onClose();
+                }}
+                className="px-4 sm:px-5 py-3 rounded-xl border border-[#e8e9ed] text-xs sm:text-sm font-bold text-[#5c647b] hover:bg-[#f8f9fc] transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 sm:px-6 py-3 rounded-xl bg-[#00acee] hover:bg-[#0099d4] text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer active:scale-95 flex items-center gap-2 disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>{isSubmitting ? 'Guardando...' : t('guardar_simcard')}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

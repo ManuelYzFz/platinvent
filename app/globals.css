@@ -1,0 +1,489 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-bs-theme="dark"], .dark, [data-bs-theme="dark"] *, .dark *));
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #f2f3f7;
+  color: #3a435d;
+  top: 0px !important;
+  position: static !important;
+  min-height: 100% !important;
+}
+
+/* ========================================================================= */
+/* MODO OSCURO (data-bs-theme="dark" & .dark)                                */
+/* ========================================================================= */
+
+[data-bs-theme="dark"],
+.dark {
+  color-scheme: dark;
+}
+
+[data-bs-theme="dark"] body,
+.dark body {
+  background-color: #121212 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Fondos de página y contenedores principales */
+[data-bs-theme="dark"] .bg-\[\#f8f9fc\],
+.dark .bg-\[\#f8f9fc\],
+[data-bs-theme="dark"] .bg-\[\#f2f3f7\],
+.dark .bg-\[\#f2f3f7\],
+[data-bs-theme="dark"] .bg-gray-50,
+.dark .bg-gray-50,
+[data-bs-theme="dark"] .bg-gray-100,
+.dark .bg-gray-100 {
+  background-color: #121212 !important;
+}
+
+/* Tarjetas, modales y tablas */
+[data-bs-theme="dark"] .bg-white,
+.dark .bg-white {
+  background-color: #161b22 !important;
+  color: #e2e8f0;
+}
+
+/* Navbar y Sidebar en modo oscuro (#161B22) */
+[data-bs-theme="dark"] header,
+.dark header,
+[data-bs-theme="dark"] header.bg-white,
+.dark header.bg-white,
+[data-bs-theme="dark"] aside,
+.dark aside,
+[data-bs-theme="dark"] aside.bg-white,
+.dark aside.bg-white {
+  background-color: #161B22 !important;
+  border-color: #30363d !important;
+}
+
+/* Encabezado y Pie del Sidebar (lo de las imágenes) en modo oscuro (#121212) */
+[data-bs-theme="dark"] .sidebar-header,
+.dark .sidebar-header,
+[data-bs-theme="dark"] aside .sidebar-header,
+.dark aside .sidebar-header,
+[data-bs-theme="dark"] .sidebar-footer,
+.dark .sidebar-footer,
+[data-bs-theme="dark"] aside .sidebar-footer,
+.dark aside .sidebar-footer,
+[data-bs-theme="dark"] .sync-badge-synced,
+.dark .sync-badge-synced {
+  background-color: #121212 !important;
+}
+
+/* Lámina que mantiene los botones en modo oscuro (#161B22) */
+[data-bs-theme="dark"] .action-buttons-card,
+.dark .action-buttons-card,
+[data-bs-theme="dark"] div.action-buttons-card,
+.dark div.action-buttons-card {
+  background-color: #161B22 !important;
+  border-color: #30363d !important;
+}
+
+/* Logo de login para modo claro y oscuro */
+.login-logo-dark {
+  display: none !important;
+}
+.login-logo-light {
+  display: block !important;
+}
+
+[data-bs-theme="dark"] .login-logo-dark,
+.dark .login-logo-dark {
+  display: block !important;
+}
+
+[data-bs-theme="dark"] .login-logo-light,
+.dark .login-logo-light {
+  display: none !important;
+}
+
+/* Cabeceras de tablas */
+[data-bs-theme="dark"] thead.bg-\[\#f8f9fc\],
+.dark thead.bg-\[\#f8f9fc\],
+[data-bs-theme="dark"] thead,
+.dark thead {
+  background-color: #13171f !important;
+}
+
+/* Bordes y divisores */
+[data-bs-theme="dark"] .border-\[\#e8e9ed\],
+.dark .border-\[\#e8e9ed\],
+[data-bs-theme="dark"] .border-gray-200,
+.dark .border-gray-200,
+[data-bs-theme="dark"] .border-gray-100,
+.dark .border-gray-100,
+[data-bs-theme="dark"] .divide-\[\#e8e9ed\],
+.dark .divide-\[\#e8e9ed\] {
+  border-color: #30363d !important;
+}
+
+/* Textos principales oscuros convertidos a claros */
+[data-bs-theme="dark"] .text-\[\#3a435d\],
+.dark .text-\[\#3a435d\],
+[data-bs-theme="dark"] .text-gray-900,
+.dark .text-gray-900,
+[data-bs-theme="dark"] .text-gray-800,
+.dark .text-gray-800,
+[data-bs-theme="dark"] .text-gray-700,
+.dark .text-gray-700 {
+  color: #f0f6fc !important;
+}
+
+/* Textos secundarios */
+[data-bs-theme="dark"] .text-\[\#5c647b\],
+.dark .text-\[\#5c647b\],
+[data-bs-theme="dark"] .text-gray-500,
+.dark .text-gray-500,
+[data-bs-theme="dark"] .text-gray-600,
+.dark .text-gray-600 {
+  color: #8b949e !important;
+}
+
+/* Inputs, selects y textareas */
+[data-bs-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+.dark input:not([type="checkbox"]):not([type="radio"]),
+[data-bs-theme="dark"] select,
+.dark select,
+[data-bs-theme="dark"] textarea,
+.dark textarea {
+  background-color: #0d1117 !important;
+  color: #f0f6fc !important;
+  border-color: #30363d !important;
+}
+
+[data-bs-theme="dark"] input::placeholder,
+.dark input::placeholder,
+[data-bs-theme="dark"] textarea::placeholder,
+.dark textarea::placeholder {
+  color: #6e7681 !important;
+}
+
+/* Filas hover */
+[data-bs-theme="dark"] .hover\:bg-\[\#f2f3f7\]:hover,
+.dark .hover\:bg-\[\#f2f3f7\]:hover,
+[data-bs-theme="dark"] .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-50:hover,
+[data-bs-theme="dark"] .hover\:bg-gray-100:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: #21262d !important;
+}
+
+[data-bs-theme="dark"] tr:hover,
+.dark tr:hover {
+  background-color: #1b212c !important;
+}
+
+/* Preloader en modo oscuro */
+[data-bs-theme="dark"] #preloader,
+.dark #preloader {
+  background-color: #121212 !important;
+}
+
+/* ========================================================================= */
+/* AJUSTES ESPECÍFICOS DE TARJETAS Y GRADIENTES EN MODO OSCURO               */
+/* ========================================================================= */
+
+/* Quitar cualquier gradiente con brillo especular blanco en modo oscuro */
+[data-bs-theme="dark"] [class*="via-white"],
+.dark [class*="via-white"],
+[data-bs-theme="dark"] .bg-linear-to-br,
+.dark .bg-linear-to-br,
+[data-bs-theme="dark"] .bg-gradient-to-br,
+.dark .bg-gradient-to-br {
+  background-image: none !important;
+}
+
+/* ========================================================================= */
+/* ELIMINACIÓN DE BRILLOS ARTIFICIALES (AI GLOW) Y SOMBRAS EN MODO OSCURO     */
+/* ========================================================================= */
+
+/* Eliminar sombras y halos en modo oscuro */
+[data-bs-theme="dark"] .shadow-xs,
+.dark .shadow-xs,
+[data-bs-theme="dark"] .shadow-sm,
+.dark .shadow-sm,
+[data-bs-theme="dark"] .shadow-md,
+.dark .shadow-md,
+[data-bs-theme="dark"] .shadow-lg,
+.dark .shadow-lg,
+[data-bs-theme="dark"] .shadow-2xs,
+.dark .shadow-2xs {
+  box-shadow: none !important;
+}
+
+/* Card 1 y Card 2 en modo oscuro: fondo neutro y bordes sutiles */
+[data-bs-theme="dark"] .border-emerald-400,
+.dark .border-emerald-400,
+[data-bs-theme="dark"] .border-emerald-300,
+.dark .border-emerald-300,
+[data-bs-theme="dark"] .border-emerald-200,
+.dark .border-emerald-200,
+[data-bs-theme="dark"] .border-amber-400,
+.dark .border-amber-400,
+[data-bs-theme="dark"] .border-amber-300,
+.dark .border-amber-300,
+[data-bs-theme="dark"] .border-amber-200,
+.dark .border-amber-200,
+[data-bs-theme="dark"] .border-purple-200,
+.dark .border-purple-200,
+[data-bs-theme="dark"] .border-purple-300,
+.dark .border-purple-300 {
+  border-color: #30363d !important;
+}
+
+/* Encabezados de tabla y tarjetas de resumen en modo oscuro: neutros y limpios, sin brillo IA */
+[data-bs-theme="dark"] thead,
+.dark thead,
+[data-bs-theme="dark"] thead tr,
+.dark thead tr {
+  background-color: #13171f !important;
+  border-color: #30363d !important;
+}
+
+[data-bs-theme="dark"] .bg-emerald-50\/60,
+.dark .bg-emerald-50\/60,
+[data-bs-theme="dark"] .bg-amber-50\/60,
+.dark .bg-amber-50\/60 {
+  background-color: #161B22 !important;
+  border-color: #30363d !important;
+}
+
+/* Badges de píldora (MDVR, Servicio Activo, Sin Servicio) en modo oscuro: tonos suaves y legibles */
+[data-bs-theme="dark"] .bg-emerald-50,
+.dark .bg-emerald-50 {
+  background-color: rgba(6, 78, 59, 0.25) !important;
+  color: #34d399 !important;
+  border-color: rgba(5, 150, 105, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .bg-amber-50,
+.dark .bg-amber-50 {
+  background-color: rgba(120, 53, 15, 0.25) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .bg-purple-50,
+.dark .bg-purple-50,
+[data-bs-theme="dark"] .bg-purple-50\/60,
+.dark .bg-purple-50\/60,
+[data-bs-theme="dark"] .bg-purple-100,
+.dark .bg-purple-100 {
+  background-color: rgba(88, 28, 135, 0.25) !important;
+  color: #c084fc !important;
+  border-color: rgba(147, 51, 234, 0.4) !important;
+}
+
+/* Divisores de tablas en modo oscuro: neutros #30363d */
+[data-bs-theme="dark"] .divide-emerald-100,
+.dark .divide-emerald-100,
+[data-bs-theme="dark"] .divide-amber-100,
+.dark .divide-amber-100,
+[data-bs-theme="dark"] .border-emerald-100,
+.dark .border-emerald-100,
+[data-bs-theme="dark"] .border-amber-100,
+.dark .border-amber-100 {
+  border-color: #30363d !important;
+}
+
+/* Badges de estado en modo oscuro: tonos suaves y legibles */
+[data-bs-theme="dark"] .bg-emerald-100,
+.dark .bg-emerald-100 {
+  background-color: rgba(6, 78, 59, 0.35) !important;
+  color: #34d399 !important;
+  border-color: rgba(5, 150, 105, 0.4) !important;
+}
+
+[data-bs-theme="dark"] .bg-amber-100,
+.dark .bg-amber-100 {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(217, 119, 6, 0.4) !important;
+}
+
+/* Badges tipo dispositivo (GPS, MDVR, etc.) */
+[data-bs-theme="dark"] .bg-indigo-50,
+.dark .bg-indigo-50 {
+  background-color: rgba(49, 46, 129, 0.3) !important;
+  border-color: rgba(79, 70, 229, 0.4) !important;
+  color: #a5b4fc !important;
+}
+
+[data-bs-theme="dark"] .text-indigo-700,
+.dark .text-indigo-700,
+[data-bs-theme="dark"] .text-indigo-900,
+.dark .text-indigo-900 {
+  color: #a5b4fc !important;
+}
+
+/* Cajas de registro dinámico en modales */
+[data-bs-theme="dark"] .bg-blue-50\/70,
+.dark .bg-blue-50\/70,
+[data-bs-theme="dark"] .bg-blue-50,
+.dark .bg-blue-50 {
+  background-color: #0c1c2e !important;
+  border-color: #1e3a5f !important;
+}
+
+[data-bs-theme="dark"] .text-blue-900,
+.dark .text-blue-900 {
+  color: #93c5fd !important;
+}
+
+[data-bs-theme="dark"] .bg-emerald-50\/70,
+.dark .bg-emerald-50\/70 {
+  background-color: #0c2317 !important;
+  border-color: #14532d !important;
+}
+
+/* Hovers de navegación y dropdowns (Sidebar, GoogleTranslator) */
+[data-bs-theme="dark"] .hover\:bg-\[\#f8f9fa\]:hover,
+.dark .hover\:bg-\[\#f8f9fa\]:hover,
+[data-bs-theme="dark"] .hover\:bg-\[\#f8f9fc\]:hover,
+.dark .hover\:bg-\[\#f8f9fc\]:hover {
+  background-color: #21262d !important;
+  color: #f0f6fc !important;
+}
+
+/* Botón Cerrar Sesión en Navbar */
+[data-bs-theme="dark"] .hover\:bg-red-50:hover,
+.dark .hover\:bg-red-50:hover {
+  background-color: #3b1219 !important;
+  border-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
+
+
+/* ========================================================================= */
+/* ELIMINACIÓN ABSOLUTA DE CUALQUIER BANNER / IFRAME DE GOOGLE TRANSLATE     */
+/* ========================================================================= */
+
+.goog-te-banner-frame,
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame.skiptranslate *,
+.VIpgJd-Z44Wjh-FWnhvd-haAclf,
+.VIpgJd-Z44Wjh-b9fvEf-THODed,
+.VIpgJd-Z44Wjh-Oycga-oZtfB,
+.VIpgJd-Z44Wjh-P2233e,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-tooltip,
+.goog-tooltip:hover,
+iframe[src*="translate.google"],
+iframe[id*="google"],
+iframe[class*="goog"],
+.skiptranslate > iframe {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0px !important;
+  width: 0px !important;
+  max-height: 0px !important;
+  max-width: 0px !important;
+  border: none !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+}
+
+html, body {
+  top: 0px !important;
+  position: static !important;
+  margin-top: 0px !important;
+  padding-top: 0px !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ========================================================================= */
+/* AJUSTES RESPONSIVOS BALANCEADOS EN PANTALLAS MÓVILES                      */
+/* ========================================================================= */
+/* Prevenir auto-zoom molesto en iOS Safari cuando los inputs reciben foco */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  input[type="email"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.goog-te-gadget {
+  color: transparent !important;
+  font-size: 0px !important;
+}
+
+.goog-te-gadget span,
+.goog-te-gadget div {
+  display: none !important;
+}
+
+/* ========================================================================= */
+/* PRELOADER VTRAXX ANIMATED COMPONENT                                       */
+/* ========================================================================= */
+
+#preloader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loader-square {
+  width: 55px;
+  height: 55px;
+  background-color: #0088cc;
+  border-radius: 10px;
+  animation: flipSquare 1.2s infinite ease-in-out;
+  box-shadow: 0 8px 25px rgba(0, 136, 204, 0.35);
+}
+
+.loader-square-sm {
+  width: 38px;
+  height: 38px;
+  background-color: #0088cc;
+  border-radius: 8px;
+  animation: flipSquare 1.2s infinite ease-in-out;
+  box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3);
+}
+
+@keyframes flipSquare {
+  0% {
+    transform: perspective(120px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(120px) rotateX(-180.1deg) rotateY(0deg);
+    background-color: #005588;
+  }
+  100% {
+    transform: perspective(120px) rotateX(-180deg) rotateY(-179.9deg);
+    background-color: #0088cc;
+  }
+}
