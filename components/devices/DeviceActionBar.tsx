@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Plus, Scan, Download, Upload, Search, XCircle, RefreshCw } from 'lucide-react';
+import { Plus, Scan, Download, Upload, Search, XCircle, RefreshCw, Tag } from 'lucide-react';
 
 export interface DeviceActionBarProps {
   onOpenCreateModal: () => void;
   onOpenScanModal: () => void;
+  onOpenManageCatalogModal?: () => void;
   onExport: () => void;
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   rawSearchQuery: string;
@@ -19,6 +20,7 @@ export interface DeviceActionBarProps {
 export function DeviceActionBar({
   onOpenCreateModal,
   onOpenScanModal,
+  onOpenManageCatalogModal,
   onExport,
   onImport,
   rawSearchQuery,
@@ -42,6 +44,18 @@ export function DeviceActionBar({
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-white shrink-0" />
             <span className="truncate">{t('agregar_dispositivo')}</span>
+          </button>
+        )}
+
+        {!isReadOnly && onOpenManageCatalogModal && (
+          <button
+            onClick={onOpenManageCatalogModal}
+            type="button"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-gray-50 dark:bg-[#161B22] dark:hover:bg-[#21262d] text-[#3a435d] dark:text-gray-100 px-3.5 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-base font-bold shadow-xs transition-all cursor-pointer hover:shadow active:scale-95 border border-[#e8e9ed] dark:border-[#30363d] hover:border-[#00acee]"
+            title="Administrar catálogo maestro de marcas y modelos"
+          >
+            <Tag className="h-4 w-4 sm:h-5 sm:w-5 text-[#00acee] shrink-0" />
+            <span className="truncate">Marcas y Modelos</span>
           </button>
         )}
 

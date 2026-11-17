@@ -21,6 +21,7 @@ import {
   Activity,
   ChevronDown,
   Check,
+  Settings2,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { DeviceRecord, VehicleRecord, SimRecord } from '@/lib/types/inventory';
@@ -36,6 +37,7 @@ interface EditLocalDeviceModalProps {
   onClose: () => void;
   device: DeviceRecord | null;
   onUpdateDevice: (updatedDevice: DeviceRecord) => void;
+  onOpenManageCatalog?: () => void;
   companiesList?: { id?: string | number; name?: string }[];
   vehiclesList?: VehicleRecord[];
   simsList?: SimRecord[];
@@ -46,6 +48,7 @@ export default function EditLocalDeviceModal({
   onClose,
   device,
   onUpdateDevice,
+  onOpenManageCatalog,
   companiesList = [],
   vehiclesList = [],
   simsList = [],
@@ -673,43 +676,56 @@ export default function EditLocalDeviceModal({
             {/* Fila 4: Marca & Modelo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
-                  {t('modal_marca_label')}
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200">
+                    {t('modal_marca_label')}
+                  </label>
+                  {onOpenManageCatalog && (
+                    <button
+                      type="button"
+                      onClick={onOpenManageCatalog}
+                      className="text-xs font-bold text-[#00acee] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Administrar catálogo de marcas y modelos"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                      <span>Gestionar</span>
+                    </button>
+                  )}
+                </div>
                 <CreatableSelect
-                  value={brand}
-                  onChange={(val) => {
-                    setBrand(val);
-                    if (val === 'Sin Asignar') {
-                      setModel('Sin Asignar');
-                    } else if (model === 'Sin Asignar') {
-                      setModel('');
-                    }
-                  }}
-                  options={brands}
-                  placeholder={t('modal_selecciona_marca')}
-                  addLabel={t('modal_agregar_marca')}
-                  inputPlaceholder={t('modal_escribe_marca')}
-                  cancelLabel={t('modal_volver_lista')}
-                />
-              </div>
+                    value={brand}
+                    onChange={(val) => {
+                      setBrand(val);
+                      if (val === 'Sin Asignar') {
+                        setModel('Sin Asignar');
+                      } else if (model === 'Sin Asignar') {
+                        setModel('');
+                      }
+                    }}
+                    options={brands}
+                    placeholder={t('modal_selecciona_marca')}
+                    addLabel={t('modal_agregar_marca')}
+                    inputPlaceholder={t('modal_escribe_marca')}
+                    cancelLabel={t('modal_volver_lista')}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
-                  {t('modal_modelo_label')}
-                </label>
-                <CreatableSelect
-                  key={brand.trim().toLowerCase()}
-                  value={model}
-                  onChange={setModel}
-                  options={brand.trim() ? modelsForBrand(brand) : []}
-                  placeholder={t('modal_selecciona_modelo')}
-                  addLabel={t('modal_agregar_modelo')}
-                  inputPlaceholder={t('modal_escribe_modelo')}
-                  cancelLabel={t('modal_volver_lista')}
-                />
+                <div>
+                  <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+                    {t('modal_modelo_label')}
+                  </label>
+                  <CreatableSelect
+                    key={brand.trim().toLowerCase()}
+                    value={model}
+                    onChange={setModel}
+                    options={brand.trim() ? modelsForBrand(brand) : []}
+                    placeholder={t('modal_selecciona_modelo')}
+                    addLabel={t('modal_agregar_modelo')}
+                    inputPlaceholder={t('modal_escribe_modelo')}
+                    cancelLabel={t('modal_volver_lista')}
+                  />
+                </div>
               </div>
-            </div>
 
             {/* Fila 5: Estado install y Estado de Servicio */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">

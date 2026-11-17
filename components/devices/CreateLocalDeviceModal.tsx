@@ -26,6 +26,7 @@ import {
   Loader2,
   ChevronDown,
   Check,
+  Settings2,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { DeviceRecord, VehicleRecord, SimRecord } from '@/lib/types/inventory';
@@ -43,6 +44,7 @@ interface CreateLocalDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddDevice: (newDevice: DeviceRecord) => void;
+  onOpenManageCatalog?: () => void;
   companiesList?: { id?: string | number; name?: string }[];
   vehiclesList?: VehicleRecord[];
   simsList?: SimRecord[];
@@ -52,6 +54,7 @@ export default function CreateLocalDeviceModal({
   isOpen,
   onClose,
   onAddDevice,
+  onOpenManageCatalog,
   companiesList = [],
   vehiclesList = [],
   simsList = [],
@@ -1005,9 +1008,22 @@ export default function CreateLocalDeviceModal({
           {/* Fila 4: Marca & Modelo (Opcionales) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
-                {t('modal_marca_label')}
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200">
+                  {t('modal_marca_label')}
+                </label>
+                {onOpenManageCatalog && (
+                  <button
+                    type="button"
+                    onClick={onOpenManageCatalog}
+                    className="text-xs font-bold text-[#00acee] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Administrar catálogo de marcas y modelos"
+                  >
+                    <Settings2 className="w-3.5 h-3.5" />
+                    <span>Gestionar</span>
+                  </button>
+                )}
+              </div>
               <CreatableSelect
                 value={brand}
                 onChange={(val) => {

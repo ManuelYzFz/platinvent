@@ -1,0 +1,12 @@
+[
+  { "brand": "Queclink", "model": "GV300" },
+  { "brand": "Queclink", "model": "GV50" },
+  { "brand": "Teltonika", "model": "FMM920" },
+  { "brand": "Teltonika", "model": "FMC130" },
+  { "brand": "Suntech", "model": "ST310U" },
+  { "brand": "Concox", "model": "JM-VL03" },
+  { "brand": "Vtraxx", "model": "dashcam" },
+  { "brand": "Vtraxx", "model": "Vtx300" },
+  { "brand": "Vtraxx", "model": "NANOBOX" },
+  { "brand": "Vtraxx", "model": "Camara ia para basura" }
+]

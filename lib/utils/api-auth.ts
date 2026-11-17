@@ -21,7 +21,14 @@ export function validateApiSession(
 ): ApiAuthResult {
   const cookieHeader = request.headers.get('cookie') || '';
   const match = cookieHeader.match(/(?:^|;\s*)jsession=([^;]*)/);
-  const session = match ? decodeURIComponent(match[1]).trim() : '';
+  let session = match ? decodeURIComponent(match[1]).trim() : '';
+
+  if (!session) {
+    const authHeader = request.headers.get('authorization') || '';
+    if (authHeader.startsWith('Bearer ')) {
+      session = authHeader.slice(7).trim();
+    }
+  }
 
   if (!session || session.length < 10 || session.startsWith('offline-')) {
     return {

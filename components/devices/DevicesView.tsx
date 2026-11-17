@@ -11,6 +11,7 @@ import CreateLocalDeviceModal from './CreateLocalDeviceModal';
 import EditLocalDeviceModal from './EditLocalDeviceModal';
 import QrCodePreviewModal from './QrCodePreviewModal';
 import ScanSearchDeviceModal from './ScanSearchDeviceModal';
+import ManageBrandsModelsModal from './ManageBrandsModelsModal';
 
 export interface DevicesViewProps {
   session?: string;
@@ -64,6 +65,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
 
   const userRole = getUserRole();
   const isReadOnly = userRole === 'solo_lectura';
+  const [isManageCatalogModalOpen, setIsManageCatalogModalOpen] = React.useState(false);
 
   return (
     <section className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 font-sans">
@@ -71,6 +73,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
       <DeviceActionBar
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onOpenScanModal={() => setIsScanModalOpen(true)}
+        onOpenManageCatalogModal={() => setIsManageCatalogModalOpen(true)}
         onExport={handleExport}
         onImport={handleImport}
         rawSearchQuery={rawSearchQuery}
@@ -230,11 +233,19 @@ export default function DevicesView({ session }: DevicesViewProps) {
       />
 
       {/* 6. MODALES DEL SISTEMA */}
+      {!isReadOnly && isManageCatalogModalOpen && (
+        <ManageBrandsModelsModal
+          isOpen={isManageCatalogModalOpen}
+          onClose={() => setIsManageCatalogModalOpen(false)}
+        />
+      )}
+
       {!isReadOnly && isCreateModalOpen && (
         <CreateLocalDeviceModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onAddDevice={handleAddLocalDevice}
+          onOpenManageCatalog={() => setIsManageCatalogModalOpen(true)}
         />
       )}
 
@@ -260,6 +271,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
           onClose={handleCloseEditModal}
           device={selectedEditDevice}
           onUpdateDevice={handleUpdateLocalDevice}
+          onOpenManageCatalog={() => setIsManageCatalogModalOpen(true)}
         />
       )}
     </section>
