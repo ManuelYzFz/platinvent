@@ -20,6 +20,7 @@ export interface DeviceTableProps {
   getMatchedVehicle: (dev: DeviceRecord) => VehicleRecord | undefined;
   onOpenQrCode: (dev: DeviceRecord) => void;
   onEditDevice: (dev: DeviceRecord) => void;
+  onDeleteDevice?: (dev: DeviceRecord) => void;
   emptyMessage: string;
   isReadOnly?: boolean;
   t: (key: string) => string;
@@ -39,6 +40,7 @@ export function DeviceTable({
   getMatchedVehicle,
   onOpenQrCode,
   onEditDevice,
+  onDeleteDevice,
   emptyMessage,
   isReadOnly = false,
   t,
@@ -139,6 +141,7 @@ export function DeviceTable({
                         type={type}
                         onOpenQrCode={onOpenQrCode}
                         onEditDevice={onEditDevice}
+                        onDeleteDevice={onDeleteDevice}
                         isReadOnly={isReadOnly}
                         t={t}
                       />

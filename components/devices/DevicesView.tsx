@@ -12,6 +12,7 @@ import EditLocalDeviceModal from './EditLocalDeviceModal';
 import QrCodePreviewModal from './QrCodePreviewModal';
 import ScanSearchDeviceModal from './ScanSearchDeviceModal';
 import ManageBrandsModelsModal from './ManageBrandsModelsModal';
+import ConfirmDeleteDeviceModal from './ConfirmDeleteDeviceModal';
 
 export interface DevicesViewProps {
   session?: string;
@@ -56,10 +57,15 @@ export default function DevicesView({ session }: DevicesViewProps) {
     isQrModalOpen,
     selectedEditDevice,
     isEditModalOpen,
+    selectedDeleteDevice,
+    isDeleteModalOpen,
     handleOpenQrCode,
     handleCloseQrModal,
     handleOpenEditDevice,
     handleCloseEditModal,
+    handleOpenDeleteDevice,
+    handleCloseDeleteModal,
+    handleDeleteLocalDevice,
     fetchData,
   } = useDevicesInventory(session);
 
@@ -189,6 +195,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
         getMatchedVehicle={getMatchedVehicle}
         onOpenQrCode={handleOpenQrCode}
         onEditDevice={handleOpenEditDevice}
+        onDeleteDevice={isReadOnly ? undefined : handleOpenDeleteDevice}
         isReadOnly={isReadOnly}
         emptyMessage={t('sin_dispositivos_instalados')}
         t={t}
@@ -207,6 +214,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
         getMatchedVehicle={getMatchedVehicle}
         onOpenQrCode={handleOpenQrCode}
         onEditDevice={handleOpenEditDevice}
+        onDeleteDevice={isReadOnly ? undefined : handleOpenDeleteDevice}
         isReadOnly={isReadOnly}
         emptyMessage={t('sin_dispositivos_disponibles')}
         t={t}
@@ -227,6 +235,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
         getMatchedVehicle={getMatchedVehicle}
         onOpenQrCode={handleOpenQrCode}
         onEditDevice={handleOpenEditDevice}
+        onDeleteDevice={isReadOnly ? undefined : handleOpenDeleteDevice}
         isReadOnly={isReadOnly}
         emptyMessage="No hay dispositivos indefinidos."
         t={t}
@@ -272,6 +281,15 @@ export default function DevicesView({ session }: DevicesViewProps) {
           device={selectedEditDevice}
           onUpdateDevice={handleUpdateLocalDevice}
           onOpenManageCatalog={() => setIsManageCatalogModalOpen(true)}
+        />
+      )}
+
+      {!isReadOnly && isDeleteModalOpen && selectedDeleteDevice && (
+        <ConfirmDeleteDeviceModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={() => handleDeleteLocalDevice(selectedDeleteDevice)}
+          device={selectedDeleteDevice}
         />
       )}
     </section>

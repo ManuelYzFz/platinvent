@@ -390,6 +390,34 @@ export async function saveDevice(dev: Body) {
   });
 }
 
+/** Elimina un dispositivo de la base de datos y libera la SIM asociada. */
+export async function deleteDevice(id?: number | string, devIdno?: string) {
+  return withTransaction(async (conn) => {
+    let existing: RowDataPacket | null = null;
+    if (id !== undefined && id !== null && /^\d+$/.test(String(id).trim())) {
+      const [rows] = await conn.query<RowDataPacket[]>('SELECT * FROM devices WHERE id = ? LIMIT 1', [Number(id)]);
+      existing = rows[0] ?? null;
+    }
+    if (!existing && devIdno && String(devIdno).trim()) {
+      const [rows] = await conn.query<RowDataPacket[]>('SELECT * FROM devices WHERE devidno = ? LIMIT 1', [String(devIdno).trim()]);
+      existing = rows[0] ?? null;
+    }
+
+    if (!existing) {
+      throw new Error('Dispositivo no encontrado');
+    }
+
+    // Si tiene SIM asociada, desmarcarla como instalada
+    if (existing.simcard_id) {
+      await conn.query('UPDATE simcards SET install = 0 WHERE id = ?', [existing.simcard_id]);
+    }
+
+    await conn.query('DELETE FROM devices WHERE id = ?', [existing.id]);
+
+    return { success: true, deletedId: existing.id, devidno: existing.devidno };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Opciones de marca / modelo (Catálogo y CRUD)
 // ---------------------------------------------------------------------------

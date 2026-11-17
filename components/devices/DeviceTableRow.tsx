@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { HardDrive, QrCode, Edit3 } from 'lucide-react';
+import { HardDrive, QrCode, Edit3, Trash2 } from 'lucide-react';
 import type { DeviceRecord, VehicleRecord } from '@/lib/types/inventory';
 import {
   formatDeviceBadge,
@@ -22,6 +22,7 @@ export interface DeviceTableRowProps {
   type: 'installed' | 'uninstalled' | 'indefinite';
   onOpenQrCode: (dev: DeviceRecord) => void;
   onEditDevice: (dev: DeviceRecord) => void;
+  onDeleteDevice?: (dev: DeviceRecord) => void;
   isReadOnly?: boolean;
   t: (key: string) => string;
 }
@@ -34,6 +35,7 @@ export const DeviceTableRow = React.memo(function DeviceTableRow({
   type,
   onOpenQrCode,
   onEditDevice,
+  onDeleteDevice,
   isReadOnly = false,
   t,
 }: DeviceTableRowProps) {
@@ -129,15 +131,33 @@ export const DeviceTableRow = React.memo(function DeviceTableRow({
           {formatInstallBadge(dev.install, t)}
         </td>
         <td className="px-2.5 py-2 whitespace-nowrap text-center">
-          <button
-            type="button"
-            onClick={() => onEditDevice(dev)}
-            className="group/edit inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-[#00acee]/10 dark:bg-[#00acee]/15 hover:bg-[#00acee] dark:hover:bg-[#00acee] border border-[#00acee] text-[#00acee] hover:text-white dark:hover:text-white"
-            title={t('editar_dispositivo') || 'Editar dispositivo'}
-          >
-            <Edit3 className="w-3.5 h-3.5 text-[#00acee] group-hover/edit:text-white transition-colors" />
-            <span>{t('editar_dispositivo') || 'Editar'}</span>
-          </button>
+          {isReadOnly ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-[#21262d] border border-gray-200 dark:border-gray-800">
+              Solo lectura
+            </span>
+          ) : (
+            <div className="flex items-center justify-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onEditDevice(dev)}
+                className="group/edit inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-[#00acee]/10 dark:bg-[#00acee]/15 hover:bg-[#00acee] dark:hover:bg-[#00acee] border border-[#00acee] text-[#00acee] hover:text-white dark:hover:text-white"
+                title={t('editar_dispositivo') || 'Editar dispositivo'}
+              >
+                <Edit3 className="w-3.5 h-3.5 text-[#00acee] group-hover/edit:text-white transition-colors" />
+                <span>{t('editar_dispositivo') || 'Editar'}</span>
+              </button>
+              {onDeleteDevice && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteDevice(dev)}
+                  className="group/del inline-flex items-center justify-center p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-600 dark:hover:bg-rose-600 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:text-white dark:hover:text-white"
+                  title={t('eliminar_dispositivo') || 'Eliminar'}
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 group-hover/del:text-white transition-colors" />
+                </button>
+              )}
+            </div>
+          )}
         </td>
       </tr>
     );
@@ -228,15 +248,27 @@ export const DeviceTableRow = React.memo(function DeviceTableRow({
             Solo lectura
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={() => onEditDevice(dev)}
-            className="group/edit inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-[#00acee]/10 dark:bg-[#00acee]/15 hover:bg-[#00acee] dark:hover:bg-[#00acee] border border-[#00acee] text-[#00acee] hover:text-white dark:hover:text-white"
-            title={t('editar_dispositivo') || 'Editar dispositivo'}
-          >
-            <Edit3 className="w-3.5 h-3.5 text-[#00acee] group-hover/edit:text-white transition-colors" />
-            <span>{t('editar_dispositivo') || 'Editar'}</span>
-          </button>
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onEditDevice(dev)}
+              className="group/edit inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-[#00acee]/10 dark:bg-[#00acee]/15 hover:bg-[#00acee] dark:hover:bg-[#00acee] border border-[#00acee] text-[#00acee] hover:text-white dark:hover:text-white"
+              title={t('editar_dispositivo') || 'Editar dispositivo'}
+            >
+              <Edit3 className="w-3.5 h-3.5 text-[#00acee] group-hover/edit:text-white transition-colors" />
+              <span>{t('editar_dispositivo') || 'Editar'}</span>
+            </button>
+            {onDeleteDevice && (
+              <button
+                type="button"
+                onClick={() => onDeleteDevice(dev)}
+                className="group/del inline-flex items-center justify-center p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-600 dark:hover:bg-rose-600 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:text-white dark:hover:text-white"
+                title={t('eliminar_dispositivo') || 'Eliminar'}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 group-hover/del:text-white transition-colors" />
+              </button>
+            )}
+          </div>
         )}
       </td>
     </tr>

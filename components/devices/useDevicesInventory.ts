@@ -43,6 +43,8 @@ export function useDevicesInventory(session?: string) {
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [selectedEditDevice, setSelectedEditDevice] = useState<DeviceRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [selectedDeleteDevice, setSelectedDeleteDevice] = useState<DeviceRecord | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
 
   // Expansión de secciones
   const [expandedRows, setExpandedRows] = useState({
@@ -88,6 +90,16 @@ export function useDevicesInventory(session?: string) {
   const handleCloseEditModal = useCallback(() => {
     setIsEditModalOpen(false);
     setSelectedEditDevice(null);
+  }, []);
+
+  const handleOpenDeleteDevice = useCallback((dev: DeviceRecord) => {
+    setSelectedDeleteDevice(dev);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleCloseDeleteModal = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    setSelectedDeleteDevice(null);
   }, []);
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -279,6 +291,50 @@ export function useDevicesInventory(session?: string) {
       await enqueueSyncMutation('device', 'update', updatedDevice);
     }
   };
+
+  const handleDeleteLocalDevice = useCallback(async (devToDelete?: DeviceRecord | null) => {
+    const target = devToDelete || selectedDeleteDevice;
+    if (!target) return;
+
+    // Optimistic UI update
+    setDevices((prev) =>
+      prev.filter((d) => {
+        if (target.id !== undefined && target.id !== null && d.id !== undefined && d.id !== null) {
+          return String(d.id) !== String(target.id);
+        }
+        const devId = String(d.devIDNO ?? d.devIdno ?? '').trim();
+        const targetDevId = String(target.devIDNO ?? target.devIdno ?? '').trim();
+        if (devId && targetDevId) {
+          return devId !== targetDevId;
+        }
+        return true;
+      })
+    );
+
+    try {
+      const res = await fetch('/api/local-devices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: target.id,
+          devIDNO: target.devIDNO || target.devIdno,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Error al eliminar el dispositivo');
+      }
+
+      void fetchData(false);
+    } catch (err: unknown) {
+      console.error('Error al eliminar dispositivo:', err);
+      const msg = err instanceof Error ? err.message : 'Error al eliminar dispositivo';
+      setError(msg);
+      void fetchData(false);
+      throw err;
+    }
+  }, [fetchData, selectedDeleteDevice]);
 
   // Mapas rápidos de vehículos
   const vehicleByDeviceId = useMemo(() => {
@@ -555,10 +611,16 @@ export function useDevicesInventory(session?: string) {
     selectedEditDevice,
     isEditModalOpen,
     setIsEditModalOpen,
+    selectedDeleteDevice,
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
     handleOpenQrCode,
     handleCloseQrModal,
     handleOpenEditDevice,
     handleCloseEditModal,
+    handleOpenDeleteDevice,
+    handleCloseDeleteModal,
+    handleDeleteLocalDevice,
     fetchData,
   };
 }
