@@ -10,6 +10,13 @@ import type { SimRecord } from '@/lib/types/inventory';
 import { useSimCardsInventory } from './useSimCardsInventory';
 import SimCardActionBar from './SimCardActionBar';
 import SimTable from './SimTable';
+import ExportModal, { type ExportColumn } from '@/components/common/ExportModal';
+import {
+  getSimDevIdno,
+  getSimCompanyName,
+  formatRegistrationTime,
+  getMatchedPatent,
+} from './sim-helpers';
 
 const CreateSimCardModal = dynamic(() => import('./CreateSimCardModal'), { ssr: false });
 const EditSimCardModal = dynamic(() => import('./EditSimCardModal'), { ssr: false });
@@ -23,6 +30,7 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
   const { t } = useTranslation();
 
   const {
+    sims,
     setSims,
     vehicles,
     devices,
@@ -33,7 +41,6 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
     handleSearchChange,
     handleScanFilterChange,
     handleRefresh,
-    handleExport,
     handleImport,
     handleOpenEditSim,
     handleCloseEditSim,
@@ -56,10 +63,68 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
     isScanSearchModalOpen,
     setIsScanSearchModalOpen,
     fetchData,
+    filteredSims,
   } = useSimCardsInventory(session);
+
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
 
   const userRole = getUserRole();
   const isReadOnly = userRole === 'solo_lectura';
+
+  const simExportColumns: ExportColumn<SimRecord>[] = React.useMemo(
+    () => [
+      {
+        id: 'index',
+        label: '#',
+        getValue: (_s, idx) => idx + 1,
+      },
+      {
+        id: 'simCard',
+        label: 'ICCID SIM',
+        getValue: (s) => String(s.simCard ?? ''),
+      },
+      {
+        id: 'phoneNum',
+        label: 'Número de Teléfono',
+        getValue: (s) => String(s.cardNum ?? s.phoneNum ?? ''),
+      },
+      {
+        id: 'company',
+        label: 'Compañía / Cliente',
+        getValue: (s) => getSimCompanyName(s) || 'Sin Asignar',
+      },
+      {
+        id: 'devIDNO',
+        label: 'Dispositivo Asignado (devIDNO)',
+        getValue: (s) => getSimDevIdno(s),
+      },
+      {
+        id: 'patent',
+        label: 'Patente Vehículo',
+        getValue: (s) => {
+          const devId = getSimDevIdno(s);
+          const isAssigned = devId !== '-';
+          return getMatchedPatent(s, vehicles, devices, isAssigned) || (isAssigned ? 'Sin Asignar' : '-');
+        },
+      },
+      {
+        id: 'operator',
+        label: 'Operador / Proveedor',
+        getValue: (s) => String(s.serviceProvider ?? ''),
+      },
+      {
+        id: 'installStatus',
+        label: 'Estado de Instalación',
+        getValue: (s) => (Number(s.status) === 1 ? 'Instalado' : 'No Instalado'),
+      },
+      {
+        id: 'registrationDate',
+        label: 'Fecha de Registro',
+        getValue: (s) => formatRegistrationTime(s.registrationTime),
+      },
+    ],
+    [devices, vehicles]
+  );
 
   return (
     <section className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 font-sans">
@@ -67,7 +132,7 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
       <SimCardActionBar
         onOpenCreateModal={() => setIsSimCardModalOpen(true)}
         onOpenScanModal={() => setIsScanSearchModalOpen(true)}
-        onExport={handleExport}
+        onExport={() => setIsExportModalOpen(true)}
         onImport={handleImport}
         rawSearchQuery={rawSearchQuery}
         onSearchChange={handleSearchChange}
@@ -184,6 +249,19 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
           onScanResult={(scannedCode) => {
             handleScanFilterChange(scannedCode.trim());
           }}
+        />
+      )}
+
+      {/* 5. MODAL DE EXPORTACIÓN PERSONALIZADA */}
+      {isExportModalOpen && (
+        <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          title="Inventario de Tarjetas SIM"
+          entityName="SIM Cards"
+          filenamePrefix="simcards"
+          data={filteredSims ?? sims ?? []}
+          columns={simExportColumns}
         />
       )}
     </section>

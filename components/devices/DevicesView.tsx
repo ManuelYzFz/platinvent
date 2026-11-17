@@ -13,6 +13,15 @@ import QrCodePreviewModal from './QrCodePreviewModal';
 import ScanSearchDeviceModal from './ScanSearchDeviceModal';
 import ManageBrandsModelsModal from './ManageBrandsModelsModal';
 import ConfirmDeleteDeviceModal from './ConfirmDeleteDeviceModal';
+import ExportModal, { type ExportColumn } from '@/components/common/ExportModal';
+import {
+  getCleanPatent,
+  getCleanCompany,
+  formatServiceStatus,
+  formatAssignmentDate,
+  formatRegistrationDate,
+} from './device-helpers';
+import type { DeviceRecord } from '@/lib/types/inventory';
 
 export interface DevicesViewProps {
   session?: string;
@@ -67,11 +76,103 @@ export default function DevicesView({ session }: DevicesViewProps) {
     handleCloseDeleteModal,
     handleDeleteLocalDevice,
     fetchData,
+    searchedDevices,
+    isExportModalOpen,
+    setIsExportModalOpen,
   } = useDevicesInventory(session);
 
   const userRole = getUserRole();
   const isReadOnly = userRole === 'solo_lectura';
   const [isManageCatalogModalOpen, setIsManageCatalogModalOpen] = React.useState(false);
+
+  const deviceExportColumns: ExportColumn<DeviceRecord>[] = React.useMemo(
+    () => [
+      {
+        id: 'devIDNO',
+        label: 'ID Dispositivo (devIDNO)',
+        getValue: (d) => String(d.devIDNO ?? d.id ?? ''),
+      },
+      {
+        id: 'imei',
+        label: 'IMEI',
+        getValue: (d) => String(d.imei ?? ''),
+      },
+      {
+        id: 'serialID',
+        label: 'Número de Serie',
+        getValue: (d) => String(d.serialID ?? ''),
+      },
+      {
+        id: 'brand',
+        label: 'Marca',
+        getValue: (d) => String(d.brand ?? 'Sin Asignar'),
+      },
+      {
+        id: 'model',
+        label: 'Modelo',
+        getValue: (d) => String(d.model ?? 'Sin Asignar'),
+      },
+      {
+        id: 'devType',
+        label: 'Tipo de Dispositivo',
+        getValue: (d) =>
+          Number(d.devType) === 7 ? 'MDVR' : Number(d.devType) === 5 ? 'GPS' : String(d.devType ?? '-'),
+      },
+      {
+        id: 'patent',
+        label: 'Patente Asignada',
+        getValue: (d) => {
+          const matchedVeh = getMatchedVehicle(d);
+          return getCleanPatent(d, matchedVeh) || 'Sin Asignar';
+        },
+      },
+      {
+        id: 'company',
+        label: 'Compañía / Cliente',
+        getValue: (d) => {
+          const matchedVeh = getMatchedVehicle(d);
+          return getCleanCompany(d, matchedVeh) || 'Sin Asignar';
+        },
+      },
+      {
+        id: 'sim',
+        label: 'SIM Card Vinculada',
+        getValue: (d) => String(d.simCard ?? d.simcardId ?? 'Sin Asignar'),
+      },
+      {
+        id: 'installStatus',
+        label: 'Estado de Instalación',
+        getValue: (d) =>
+          Number(d.install) === 1
+            ? 'Instalado'
+            : Number(d.install) === 0
+            ? 'No Instalado'
+            : 'Indefinido',
+      },
+      {
+        id: 'serviceStatus',
+        label: 'Estado de Servicio',
+        getValue: (d) => {
+          const matchedVeh = getMatchedVehicle(d);
+          return formatServiceStatus(d, matchedVeh).label;
+        },
+      },
+      {
+        id: 'assignmentDate',
+        label: 'Fecha de Asignación',
+        getValue: (d) => {
+          const matchedVeh = getMatchedVehicle(d);
+          return formatAssignmentDate(d, matchedVeh);
+        },
+      },
+      {
+        id: 'registrationDate',
+        label: 'Fecha de Registro',
+        getValue: (d) => formatRegistrationDate(d),
+      },
+    ],
+    [getMatchedVehicle]
+  );
 
   return (
     <section className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 font-sans">
@@ -80,7 +181,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
         onOpenScanModal={() => setIsScanModalOpen(true)}
         onOpenManageCatalogModal={() => setIsManageCatalogModalOpen(true)}
-        onExport={handleExport}
+        onExport={() => setIsExportModalOpen(true)}
         onImport={handleImport}
         rawSearchQuery={rawSearchQuery}
         onSearchChange={handleSearchChange}
@@ -290,6 +391,19 @@ export default function DevicesView({ session }: DevicesViewProps) {
           onClose={handleCloseDeleteModal}
           onConfirm={() => handleDeleteLocalDevice(selectedDeleteDevice)}
           device={selectedDeleteDevice}
+        />
+      )}
+
+      {/* 7. MODAL DE EXPORTACIÓN PERSONALIZADA */}
+      {isExportModalOpen && (
+        <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          title="Inventario de Dispositivos"
+          entityName="Dispositivos"
+          filenamePrefix="dispositivos"
+          data={searchedDevices}
+          columns={deviceExportColumns}
         />
       )}
     </section>

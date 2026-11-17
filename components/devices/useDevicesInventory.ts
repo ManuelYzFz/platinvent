@@ -370,66 +370,12 @@ export function useDevicesInventory(session?: string) {
     return undefined;
   }, [vehicleByDeviceId, vehicleByPatent]);
 
-  // Exportar dispositivos a CSV compatible con Excel
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
-    if (devices.length === 0) return;
-    const headers = [
-      'ID Dispositivo (devIDNO)',
-      'IMEI',
-      'Serie',
-      'Marca',
-      'Modelo',
-      'Tipo (devType)',
-      'Patente Asignada',
-      'Compañía / Cliente',
-      'Estado Instalación',
-      'Estado Servicio',
-      'Fecha Asignación',
-      'Fecha Registro',
-    ];
-    const rows = devices.map((d) => {
-      const matchedVeh = getMatchedVehicle(d);
-      const patent = getCleanPatent(d, matchedVeh) || 'Sin Asignar';
-      const company = getCleanCompany(d, matchedVeh) || 'Sin Asignar';
-      const installStatus =
-        Number(d.install) === 1
-          ? 'Instalado'
-          : Number(d.install) === 0
-            ? 'No Instalado'
-            : 'Indefinido';
-      const devTypeStr =
-        Number(d.devType) === 7 ? 'MDVR' : Number(d.devType) === 5 ? 'GPS' : String(d.devType ?? '-');
-      const serviceStatusStr = formatServiceStatus(d, matchedVeh).label;
-      const asgDate = formatAssignmentDate(d, matchedVeh);
-      const regDate = formatRegistrationDate(d);
-
-      return [
-        `"${String(d.devIDNO ?? d.id ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.imei ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.serialID ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.brand ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.model ?? '').replace(/"/g, '""')}"`,
-        `"${devTypeStr}"`,
-        `"${patent.replace(/"/g, '""')}"`,
-        `"${company.replace(/"/g, '""')}"`,
-        `"${installStatus}"`,
-        `"${serviceStatusStr}"`,
-        `"${asgDate}"`,
-        `"${regDate}"`,
-      ].join(';');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dispositivos_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [devices, getMatchedVehicle]);
+    setIsExportModalOpen(true);
+  }, []);
 
   // Importar dispositivos desde CSV o JSON
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -574,6 +520,9 @@ export function useDevicesInventory(session?: string) {
 
   return {
     devices,
+    searchedDevices,
+    isExportModalOpen,
+    setIsExportModalOpen,
     loading,
     error,
     rawSearchQuery,

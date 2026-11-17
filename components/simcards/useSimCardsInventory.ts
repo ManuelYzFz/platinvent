@@ -154,53 +154,12 @@ export function useSimCardsInventory(session?: string) {
     setError(data?.error || 'Datos inválidos: no se pudo guardar.');
   }, [fetchData]);
 
-  // Exportar SIM Cards a CSV compatible con Excel
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
-    if (sims.length === 0) return;
-    const headers = [
-      '#',
-      'ICCID SIM',
-      'Número Teléfono',
-      'Compañía / Cliente',
-      'Dispositivo Asignado (devIDNO)',
-      'Patente Vehículo',
-      'Operador',
-      'Estado Instalación',
-      'Fecha Registro',
-    ];
-
-    const rows = sims.map((s, idx) => {
-      const devId = getSimDevIdno(s);
-      const isAssigned = devId !== '-';
-      const company = getSimCompanyName(s) || 'Sin Asignar';
-      const patent = getMatchedPatent(s, vehicles, devices, isAssigned) || (isAssigned ? 'Sin Asignar' : '-');
-      const installStatus = Number(s.status) === 1 ? 'Instalado' : 'No Instalado';
-      const regDate = formatRegistrationTime(s.registrationTime);
-
-      return [
-        `"${idx + 1}"`,
-        `"${String(s.simCard ?? '').replace(/"/g, '""')}"`,
-        `"${String(s.phoneNum ?? '').replace(/"/g, '""')}"`,
-        `"${company.replace(/"/g, '""')}"`,
-        `"${devId.replace(/"/g, '""')}"`,
-        `"${patent.replace(/"/g, '""')}"`,
-        `"${String(s.serviceProvider ?? '').replace(/"/g, '""')}"`,
-        `"${installStatus}"`,
-        `"${regDate}"`,
-      ].join(';');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `simcards_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [sims, vehicles, devices]);
+    setIsExportModalOpen(true);
+  }, []);
 
   // Importar SIM Cards desde CSV o JSON
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -431,6 +390,9 @@ export function useSimCardsInventory(session?: string) {
 
   return {
     sims,
+    filteredSims,
+    isExportModalOpen,
+    setIsExportModalOpen,
     setSims,
     vehicles,
     devices,
