@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -17,6 +17,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useDeviceOptions } from './useDeviceOptions';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 interface ManageBrandsModelsModalProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [successMsg, setSuccessMsg] = useState<string>('');
+
+  useScrollLock(isOpen);
 
   // Clean brands list
   const cleanBrands = useMemo(() => {
@@ -271,20 +274,23 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#161B22] border border-[#e8e9ed] dark:border-[#30363d] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div className="bg-white dark:bg-[#162032] border border-slate-200 dark:border-white/14 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Cabecera del Modal */}
-        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-[#e8e9ed] dark:border-[#30363d] flex items-center justify-between bg-gray-50/50 dark:bg-[#0d1117]/50 shrink-0">
+        <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/70 dark:bg-[#121927] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00acee]/10 text-[#00acee] flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-[#00A3E0]/10 dark:bg-[#00A3E0]/15 text-[#00A3E0] border border-[#00A3E0]/20 flex items-center justify-center font-bold">
               <Tag className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-extrabold text-[#3a435d] dark:text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Gestión de Marcas y Modelos
               </h2>
-              <p className="text-xs text-[#5c647b] dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Catálogo maestro de hardware telemático y dispositivos de inventario
               </p>
             </div>
@@ -292,7 +298,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#21262d] transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
             title="Cerrar modal"
           >
             <X className="w-5 h-5" />
@@ -314,16 +320,16 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
         )}
 
         {/* Cuerpo del Modal con Dos Columnas */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-[#e8e9ed] dark:divide-[#30363d]">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-white/10">
           
           {/* COLUMNA IZQUIERDA: MARCAS (5 columnas) */}
-          <div className="md:col-span-5 p-4 sm:p-5 flex flex-col overflow-hidden bg-gray-50/30 dark:bg-[#0d1117]/20">
+          <div className="md:col-span-5 p-4 sm:p-5 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-[#0F1726]/40">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-[#00acee]" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-[#00A3E0]" />
                 Marcas ({cleanBrands.length})
               </span>
-              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00acee]" />}
+              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#00A3E0]" />}
             </div>
 
             {/* Input para agregar nueva marca */}
@@ -334,12 +340,12 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                 value={newBrandName}
                 onChange={(e) => setNewBrandName(e.target.value)}
                 maxLength={40}
-                className="flex-1 px-3 py-2 bg-white dark:bg-[#161B22] border border-[#e8e9ed] dark:border-[#30363d] rounded-xl text-xs sm:text-sm text-[#3a435d] dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#00acee] transition-all"
+                className="flex-1 px-3 py-2 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all"
               />
               <button
                 type="submit"
                 disabled={isSubmitting || !newBrandName.trim()}
-                className="px-3 py-2 bg-[#00acee] hover:bg-[#0099d4] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                className="px-3 py-2 bg-[#00A3E0] hover:bg-[#0092c8] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
                 title="Agregar marca"
               >
                 <Plus className="w-4 h-4" />
@@ -350,13 +356,13 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
             {/* Buscador de Marcas */}
             {cleanBrands.length > 5 && (
               <div className="relative mb-3">
-                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Buscar marca..."
                   value={searchBrand}
                   onChange={(e) => setSearchBrand(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-[#161B22] border border-[#e8e9ed] dark:border-[#30363d] rounded-lg text-xs text-[#3a435d] dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#00acee]"
+                  className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-lg text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0]"
                 />
               </div>
             )}
@@ -364,7 +370,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
             {/* Lista de Marcas con scroll */}
             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
               {filteredBrands.length === 0 ? (
-                <div className="text-center py-8 text-xs text-gray-400">
+                <div className="text-center py-8 text-xs text-slate-400">
                   No se encontraron marcas registradas.
                 </div>
               ) : (
@@ -379,13 +385,13 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                     return (
                       <div
                         key={b}
-                        className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-[#161B22] border border-[#00acee] rounded-xl"
+                        className="flex items-center gap-1.5 p-1.5 bg-white dark:bg-[#0F1726] border border-[#00A3E0] rounded-xl"
                       >
                         <input
                           type="text"
                           value={editingBrandValue}
                           onChange={(e) => setEditingBrandValue(e.target.value)}
-                          className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold bg-transparent text-[#3a435d] dark:text-white focus:outline-none"
+                          className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold bg-transparent text-slate-800 dark:text-white focus:outline-none"
                           autoFocus
                           maxLength={40}
                         />
@@ -400,7 +406,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                         <button
                           type="button"
                           onClick={() => setEditingBrand(null)}
-                          className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg cursor-pointer"
                           title="Cancelar"
                         >
                           <X className="w-4 h-4" />
@@ -415,13 +421,13 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                       onClick={() => setSelectedBrand(b)}
                       className={`group flex items-center justify-between p-2.5 sm:p-3 rounded-xl cursor-pointer transition-all border ${
                         isSelected
-                          ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 border-[#00acee]/40 text-[#00acee] font-extrabold shadow-2xs'
-                          : 'bg-white dark:bg-[#161B22] border-[#e8e9ed] dark:border-[#30363d] text-[#3a435d] dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 font-semibold'
+                          ? 'bg-[#00A3E0]/10 dark:bg-[#00A3E0]/20 border-[#00A3E0]/40 text-[#00A3E0] font-bold shadow-2xs'
+                          : 'bg-white dark:bg-[#162032] border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/20 font-semibold'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
                         <span className="text-xs sm:text-sm truncate">{b}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-bold shrink-0">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 font-bold shrink-0">
                           {modelsCount}
                         </span>
                       </div>
@@ -434,7 +440,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                             setEditingBrand(b);
                             setEditingBrandValue(b);
                           }}
-                          className="p-1 text-gray-400 hover:text-[#00acee] hover:bg-white dark:hover:bg-[#21262d] rounded-md transition-colors cursor-pointer"
+                          className="p-1 text-slate-400 hover:text-[#00A3E0] hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-md transition-colors cursor-pointer"
                           title="Renombrar marca"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -445,12 +451,12 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                             e.stopPropagation();
                             handleDeleteBrand(b);
                           }}
-                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-white dark:hover:bg-[#21262d] rounded-md transition-colors cursor-pointer"
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-md transition-colors cursor-pointer"
                           title="Eliminar marca"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        <ChevronRight className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#00acee]' : 'text-gray-300 dark:text-gray-600'}`} />
+                        <ChevronRight className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#00A3E0]' : 'text-slate-300 dark:text-slate-600'}`} />
                       </div>
                     </div>
                   );
@@ -460,16 +466,16 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
           </div>
 
           {/* COLUMNA DERECHA: MODELOS DE LA MARCA (7 columnas) */}
-          <div className="md:col-span-7 p-4 sm:p-5 flex flex-col overflow-hidden bg-white dark:bg-[#161B22]">
+          <div className="md:col-span-7 p-4 sm:p-5 flex flex-col overflow-hidden bg-white dark:bg-[#162032]">
             {activeBrand ? (
               <>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-300 flex items-center gap-1.5">
-                      <Cpu className="w-4 h-4 text-[#00acee]" />
-                      Modelos de <span className="text-[#00acee] font-extrabold">{activeBrand}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Cpu className="w-4 h-4 text-[#00A3E0]" />
+                      Modelos de <span className="text-[#00A3E0] font-bold">{activeBrand}</span>
                     </span>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
+                    <p className="text-[11px] text-slate-400 mt-0.5">
                       {modelsForActiveBrand.length} {modelsForActiveBrand.length === 1 ? 'modelo registrado' : 'modelos registrados'}
                     </p>
                   </div>
@@ -483,12 +489,12 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                     value={newModelName}
                     onChange={(e) => setNewModelName(e.target.value)}
                     maxLength={40}
-                    className="flex-1 px-3 py-2 bg-gray-50/50 dark:bg-[#0d1117] border border-[#e8e9ed] dark:border-[#30363d] rounded-xl text-xs sm:text-sm text-[#3a435d] dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#00acee] transition-all"
+                    className="flex-1 px-3 py-2 bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all"
                   />
                   <button
                     type="submit"
                     disabled={isSubmitting || !newModelName.trim()}
-                    className="px-4 py-2 bg-[#00acee] hover:bg-[#0099d4] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                    className="px-4 py-2 bg-[#00A3E0] hover:bg-[#0092c8] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Agregar Modelo</span>
@@ -498,12 +504,12 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                 {/* Lista de Modelos */}
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                   {modelsForActiveBrand.length === 0 ? (
-                    <div className="text-center py-12 px-4 border border-dashed border-[#e8e9ed] dark:border-[#30363d] rounded-2xl">
-                      <Cpu className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    <div className="text-center py-12 px-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl">
+                      <Cpu className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                         No hay modelos registrados para {activeBrand}.
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-1">
+                      <p className="text-[11px] text-slate-400 mt-1">
                         Escribe un nombre arriba para agregarlo al catálogo.
                       </p>
                     </div>
@@ -515,13 +521,13 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                         return (
                           <div
                             key={m}
-                            className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-[#0d1117] border border-[#00acee] rounded-xl"
+                            className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-[#0F1726] border border-[#00A3E0] rounded-xl"
                           >
                             <input
                               type="text"
                               value={editingModelValue}
                               onChange={(e) => setEditingModelValue(e.target.value)}
-                              className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold bg-transparent text-[#3a435d] dark:text-white focus:outline-none"
+                              className="flex-1 px-2 py-1 text-xs sm:text-sm font-bold bg-transparent text-slate-800 dark:text-white focus:outline-none"
                               autoFocus
                               maxLength={40}
                             />
@@ -536,7 +542,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                             <button
                               type="button"
                               onClick={() => setEditingModel(null)}
-                              className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg cursor-pointer"
                               title="Cancelar"
                             >
                               <X className="w-4 h-4" />
@@ -548,11 +554,11 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                       return (
                         <div
                           key={m}
-                          className="group flex items-center justify-between p-3 rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-gray-50/50 dark:bg-[#0d1117]/50 hover:bg-white dark:hover:bg-[#161B22] hover:border-[#00acee]/40 transition-all shadow-2xs"
+                          className="group flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-[#0F1726]/60 hover:bg-white dark:hover:bg-[#1E293B] hover:border-[#00A3E0]/40 transition-all shadow-2xs"
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className="w-2 h-2 rounded-full bg-[#00acee]" />
-                            <span className="text-xs sm:text-sm font-bold text-[#3a435d] dark:text-white">
+                            <span className="w-2 h-2 rounded-full bg-[#00A3E0]" />
+                            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-white">
                               {m}
                             </span>
                           </div>
@@ -564,7 +570,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                                 setEditingModel(m);
                                 setEditingModelValue(m);
                               }}
-                              className="p-1.5 text-gray-400 hover:text-[#00acee] hover:bg-gray-100 dark:hover:bg-[#21262d] rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-[#00A3E0] hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-lg transition-colors cursor-pointer"
                               title="Editar / Renombrar modelo"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -572,7 +578,7 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                             <button
                               type="button"
                               onClick={() => handleDeleteModel(m)}
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
                               title="Eliminar modelo"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -585,24 +591,24 @@ export default function ManageBrandsModelsModal({ isOpen, onClose }: ManageBrand
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-400">
-                <Layers className="w-10 h-10 text-gray-300 dark:text-gray-600 mb-2" />
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                <Layers className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2" />
                 <p className="text-xs font-semibold">Selecciona o agrega una marca a la izquierda</p>
-                <p className="text-[11px] text-gray-400 mt-1">para ver y administrar sus modelos asociados.</p>
+                <p className="text-[11px] text-slate-400 mt-1">para ver y administrar sus modelos asociados.</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer del Modal */}
-        <div className="px-5 sm:px-6 py-3.5 border-t border-[#e8e9ed] dark:border-[#30363d] flex items-center justify-between bg-gray-50/50 dark:bg-[#0d1117]/50 shrink-0">
-          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+        <div className="px-5 sm:px-6 py-3.5 border-t border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/70 dark:bg-[#121927] shrink-0">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
             Los cambios se sincronizan en tiempo real con la base de datos y los formularios de dispositivos.
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-[#21262d] dark:hover:bg-[#30363d] text-[#3a435d] dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-[#121927] dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer"
           >
             Listo / Cerrar
           </button>

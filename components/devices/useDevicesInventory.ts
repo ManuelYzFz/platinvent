@@ -23,6 +23,7 @@ import {
   formatRegistrationDate,
   formatServiceStatus,
 } from './device-helpers';
+import { toast } from '@/components/common/Toast';
 
 export const PAGE_SIZE = 10;
 
@@ -229,6 +230,7 @@ export function useDevicesInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('device', 'create', newDevice);
+      toast.info('Dispositivo guardado offline (se sincronizará al reconectar)');
       return;
     }
 
@@ -240,14 +242,18 @@ export function useDevicesInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos: no se pudo guardar.');
       } else if (!res.ok) {
         await enqueueSyncMutation('device', 'create', newDevice);
+        toast.info('Guardado localmente. Pendiente de sincronizar');
       } else {
+        toast.success(`Dispositivo ${newDevice.devIDNO || newDevice.serialID || ''} registrado`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al guardar dispositivo, encolando offline:', err);
       await enqueueSyncMutation('device', 'create', newDevice);
+      toast.info('Dispositivo guardado offline');
     }
   }, [fetchData, handleRejectedSave]);
 
@@ -270,6 +276,7 @@ export function useDevicesInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('device', 'update', updatedDevice);
+      toast.info('Actualización guardada offline');
       return;
     }
 
@@ -281,14 +288,18 @@ export function useDevicesInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos al actualizar');
       } else if (!res.ok) {
         await enqueueSyncMutation('device', 'update', updatedDevice);
+        toast.info('Actualización pendiente de sincronizar');
       } else {
+        toast.success(`Dispositivo ${updatedDevice.devIDNO || updatedDevice.serialID || ''} actualizado`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al actualizar dispositivo, encolando offline:', err);
       await enqueueSyncMutation('device', 'update', updatedDevice);
+      toast.info('Actualización guardada offline');
     }
   };
 
@@ -326,11 +337,13 @@ export function useDevicesInventory(session?: string) {
         throw new Error(data?.error || 'Error al eliminar el dispositivo');
       }
 
+      toast.info(`Dispositivo ${target.devIDNO || target.serialID || ''} eliminado`);
       void fetchData(false);
     } catch (err: unknown) {
       console.error('Error al eliminar dispositivo:', err);
       const msg = err instanceof Error ? err.message : 'Error al eliminar dispositivo';
       setError(msg);
+      toast.error(msg);
       void fetchData(false);
       throw err;
     }

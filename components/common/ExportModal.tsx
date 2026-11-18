@@ -13,6 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { exportToCsv, exportToExcel, exportToPdf } from '@/lib/utils/export-helpers';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 export interface ExportColumn<T> {
   id: string;
@@ -49,6 +50,8 @@ export default function ExportModal<T>({
   const [errorMsg, setErrorMsg] = useState('');
 
   // Inicializar columnas seleccionadas cuando se abre el modal
+  useScrollLock(isOpen);
+
   useEffect(() => {
     if (isOpen) {
       const initialIds = columns
@@ -57,13 +60,7 @@ export default function ExportModal<T>({
       setSelectedColumnIds(initialIds);
       setErrorMsg('');
       setIsExporting(false);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [isOpen, columns]);
 
   // Manejo de tecla Escape
@@ -160,24 +157,25 @@ export default function ExportModal<T>({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
       onClick={() => !isExporting && onClose()}
     >
       <div
-        className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-[#161B22] border border-gray-200 dark:border-[#30363d] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl bg-white dark:bg-[#162032] border border-slate-200 dark:border-white/14 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header compacto */}
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-[#30363d] px-5 py-3.5 bg-gray-50/70 dark:bg-[#1c2128]">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 px-5 py-3.5 bg-slate-50/70 dark:bg-[#121927]">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#00acee]/10 text-[#00acee] dark:bg-[#00acee]/20 border border-[#00acee]/30 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#00A3E0]/10 text-[#00A3E0] dark:bg-[#00A3E0]/20 border border-[#00A3E0]/30 shrink-0">
               <Download className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-[#3a435d] dark:text-white leading-tight">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
                 {title}
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {data.length} {data.length === 1 ? 'registro' : 'registros'} para exportar
               </p>
             </div>
@@ -186,7 +184,7 @@ export default function ExportModal<T>({
             type="button"
             disabled={isExporting}
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-[#282e33] transition-colors cursor-pointer disabled:opacity-50"
+            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
             title="Cerrar"
           >
             <X className="h-4 w-4" />
@@ -197,7 +195,7 @@ export default function ExportModal<T>({
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
           {/* 1. Selector de Formato (Excel, PDF, CSV - Limpio y sin subtítulos) */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               1. Formato de Archivo
             </label>
             <div className="grid grid-cols-3 gap-2.5">
@@ -208,7 +206,7 @@ export default function ExportModal<T>({
                 className={`relative flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
                   selectedFormat === 'excel'
                     ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 shadow-xs'
-                    : 'border-gray-200 dark:border-[#30363d] hover:border-emerald-300 dark:hover:border-emerald-800 bg-white dark:bg-[#1c2128] text-[#3a435d] dark:text-gray-200'
+                    : 'border-slate-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-800 bg-white dark:bg-[#0F1726] text-slate-800 dark:text-slate-200'
                 }`}
               >
                 <div
@@ -220,7 +218,7 @@ export default function ExportModal<T>({
                 >
                   <FileSpreadsheet className="h-4 w-4" />
                 </div>
-                <span className="text-xs sm:text-sm font-extrabold truncate">Excel</span>
+                <span className="text-xs sm:text-sm font-bold truncate">Excel</span>
               </button>
 
               {/* Opción PDF */}
@@ -230,7 +228,7 @@ export default function ExportModal<T>({
                 className={`relative flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
                   selectedFormat === 'pdf'
                     ? 'border-rose-500 bg-rose-50/80 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 shadow-xs'
-                    : 'border-gray-200 dark:border-[#30363d] hover:border-rose-300 dark:hover:border-rose-800 bg-white dark:bg-[#1c2128] text-[#3a435d] dark:text-gray-200'
+                    : 'border-slate-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-800 bg-white dark:bg-[#0F1726] text-slate-800 dark:text-slate-200'
                 }`}
               >
                 <div
@@ -242,7 +240,7 @@ export default function ExportModal<T>({
                 >
                   <FileText className="h-4 w-4" />
                 </div>
-                <span className="text-xs sm:text-sm font-extrabold truncate">PDF</span>
+                <span className="text-xs sm:text-sm font-bold truncate">PDF</span>
               </button>
 
               {/* Opción CSV */}
@@ -251,20 +249,20 @@ export default function ExportModal<T>({
                 onClick={() => setSelectedFormat('csv')}
                 className={`relative flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
                   selectedFormat === 'csv'
-                    ? 'border-[#00acee] bg-[#00acee]/15 dark:bg-[#00acee]/25 text-[#0089be] dark:text-[#38bdf8] shadow-xs'
-                    : 'border-gray-200 dark:border-[#30363d] hover:border-[#00acee]/60 bg-white dark:bg-[#1c2128] text-[#3a435d] dark:text-gray-200'
+                    ? 'border-[#00A3E0] bg-[#00A3E0]/15 dark:bg-[#00A3E0]/25 text-[#00A3E0] shadow-xs'
+                    : 'border-slate-200 dark:border-white/10 hover:border-[#00A3E0]/60 bg-white dark:bg-[#0F1726] text-slate-800 dark:text-slate-200'
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg shrink-0 ${
                     selectedFormat === 'csv'
-                      ? 'bg-[#00acee] text-white'
-                      : 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee]'
+                      ? 'bg-[#00A3E0] text-white'
+                      : 'bg-[#00A3E0]/10 dark:bg-[#00A3E0]/20 text-[#00A3E0]'
                   }`}
                 >
                   <FileCode className="h-4 w-4" />
                 </div>
-                <span className="text-xs sm:text-sm font-extrabold truncate">CSV</span>
+                <span className="text-xs sm:text-sm font-bold truncate">CSV</span>
               </button>
             </div>
           </div>
@@ -272,22 +270,22 @@ export default function ExportModal<T>({
           {/* 2. Selector de Columnas con Checkboxes */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 2. Contenido a Incluir ({selectedColumnIds.length} de {columns.length})
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="text-xs font-semibold text-[#00acee] hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-[#00A3E0] hover:underline cursor-pointer"
                 >
                   Marcar todos
                 </button>
-                <span className="text-gray-300 dark:text-gray-600">|</span>
+                <span className="text-slate-300 dark:text-white/20">|</span>
                 <button
                   type="button"
                   onClick={deselectAll}
-                  className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:underline cursor-pointer"
                 >
                   Desmarcar todos
                 </button>
@@ -295,7 +293,7 @@ export default function ExportModal<T>({
             </div>
 
             {/* Cuadrícula de checkboxes compacta */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-2.5 rounded-xl border border-gray-200 dark:border-[#30363d] bg-gray-50/50 dark:bg-[#161B22]/60">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#0F1726]/60">
               {columns.map((col) => {
                 const isChecked = selectedColumnIds.includes(col.id);
                 return (
@@ -303,8 +301,8 @@ export default function ExportModal<T>({
                     key={col.id}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer text-xs select-none ${
                       isChecked
-                        ? 'border-[#00acee]/40 bg-white dark:bg-[#1c2128] text-[#3a435d] dark:text-white shadow-2xs font-semibold'
-                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100/70 dark:hover:bg-[#21262d]'
+                        ? 'border-[#00A3E0]/40 bg-white dark:bg-[#162032] text-slate-800 dark:text-white shadow-2xs font-semibold'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-[#1E293B]'
                     }`}
                   >
                     <input
@@ -314,9 +312,9 @@ export default function ExportModal<T>({
                       className="sr-only"
                     />
                     {isChecked ? (
-                      <CheckSquare className="h-3.5 w-3.5 text-[#00acee] shrink-0" />
+                      <CheckSquare className="h-3.5 w-3.5 text-[#00A3E0] shrink-0" />
                     ) : (
-                      <Square className="h-3.5 w-3.5 text-gray-400 dark:text-gray-600 shrink-0" />
+                      <Square className="h-3.5 w-3.5 text-slate-400 dark:text-slate-600 shrink-0" />
                     )}
                     <span className="truncate">{col.label}</span>
                   </label>
@@ -335,12 +333,12 @@ export default function ExportModal<T>({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2.5 border-t border-gray-100 dark:border-[#30363d] px-5 py-3 bg-gray-50/50 dark:bg-[#1c2128]">
+        <div className="flex items-center justify-end gap-2.5 border-t border-slate-200 dark:border-white/10 px-5 py-3 bg-slate-50/70 dark:bg-[#121927]">
           <button
             type="button"
             disabled={isExporting}
             onClick={onClose}
-            className="rounded-xl border border-gray-300 dark:border-[#30363d] px-3.5 py-2 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#282e33] transition-colors cursor-pointer disabled:opacity-50"
+            className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#162032] px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -349,12 +347,12 @@ export default function ExportModal<T>({
             type="button"
             disabled={isExporting || selectedColumnIds.length === 0}
             onClick={handleDownload}
-            className={`flex items-center gap-2 rounded-xl px-4.5 py-2 text-xs sm:text-sm font-bold text-white shadow-sm transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex items-center gap-2 rounded-xl px-4.5 py-2 text-xs sm:text-sm font-bold text-white shadow-xs transition-all cursor-pointer active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed ${
               selectedFormat === 'excel'
                 ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20'
                 : selectedFormat === 'pdf'
                 ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-500/20'
-                : 'bg-[#00acee] hover:bg-[#0099d4] shadow-[#00acee]/20'
+                : 'bg-[#00A3E0] hover:bg-[#0092c8] shadow-[#00A3E0]/20'
             }`}
           >
             {isExporting ? (

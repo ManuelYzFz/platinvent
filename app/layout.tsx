@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PwaManager from "@/components/pwa/PwaManager";
+import { ToastProvider } from "@/components/common/Toast";
 import { APP_METADATA } from "@/lib/constants";
 
 const geistSans = Geist({
@@ -81,7 +82,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col font-sans">
-        <div className="flex-1">{children}</div>
+        <ToastProvider>
+          <div className="flex-1">{children}</div>
+        </ToastProvider>
         <PwaManager />
       </body>
     </html>

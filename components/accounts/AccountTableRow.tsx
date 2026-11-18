@@ -44,16 +44,16 @@ export default function AccountTableRow({
 
   return (
     <tr
-      className={`hover:bg-gray-50/80 dark:hover:bg-[#1c2128] transition-colors ${
-        !isActive ? 'opacity-60 bg-gray-50/40 dark:bg-[#13171f]' : ''
+      className={`hover:bg-slate-50 dark:hover:bg-[#1E293B] transition-colors ${
+        !isActive ? 'opacity-60 bg-slate-50/40 dark:bg-[#0F1726]' : ''
       }`}
     >
-      <td className="px-4 py-3.5 font-mono text-center text-xs font-semibold text-gray-400">#{account.id}</td>
+      <td className="px-4 py-3.5 font-mono text-center text-xs font-semibold text-slate-400 dark:text-slate-500">#{account.id}</td>
       <td className="px-4 py-3.5 font-semibold text-sm">
         <div className="flex items-center gap-2">
           <span>{account.username}</span>
           {isSelf && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#00A3E0]/10 text-[#00A3E0] dark:bg-[#00A3E0]/20 dark:text-[#00A3E0]">
               Tu cuenta
             </span>
           )}
@@ -84,7 +84,7 @@ export default function AccountTableRow({
           <button
             type="button"
             onClick={() => onEditRole(account)}
-            className="p-1.5 rounded-lg border border-[#e8e9ed] dark:border-[#30363d] text-gray-600 dark:text-gray-300 hover:text-[#00acee] hover:border-[#00acee] dark:hover:text-[#00acee] transition-all cursor-pointer"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-[#00A3E0] hover:border-[#00A3E0] dark:hover:text-[#00A3E0] transition-all cursor-pointer shadow-2xs"
             title="Editar cuenta"
           >
             <Edit2 className="w-3.5 h-3.5" />
@@ -92,7 +92,7 @@ export default function AccountTableRow({
           <button
             type="button"
             onClick={() => onResetPassword(account)}
-            className="p-1.5 rounded-lg border border-[#e8e9ed] dark:border-[#30363d] text-gray-600 dark:text-gray-300 hover:text-amber-600 hover:border-amber-400 dark:hover:text-amber-400 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-amber-600 hover:border-amber-400 dark:hover:text-amber-400 transition-all cursor-pointer shadow-2xs"
             title="Restablecer contraseña"
           >
             <KeyRound className="w-3.5 h-3.5" />
@@ -101,7 +101,7 @@ export default function AccountTableRow({
             type="button"
             disabled={isSelf}
             onClick={() => onToggleActive(account)}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${toggleClass}`}
+            className={`p-1.5 rounded-lg border transition-all cursor-pointer shadow-2xs ${toggleClass}`}
             title={toggleTitle}
           >
             {isActive ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}

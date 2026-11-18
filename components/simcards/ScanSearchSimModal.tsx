@@ -13,6 +13,7 @@ import {
 import { normalizeICCID } from '@/lib/utils/sim-utils';
 import { useTranslation } from '@/lib/i18n';
 import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 interface ScanSearchSimModalProps {
   isOpen: boolean;
@@ -260,17 +261,7 @@ export default function ScanSearchSimModal({
     }, 150);
   }, [onClose, onScanResult, stopCamera]);
 
-  // Bloquear scroll de fondo mientras el modal está abierto
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   useEffect(() => {
     let ignore = false;
@@ -335,10 +326,11 @@ export default function ScanSearchSimModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-1.5 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-1.5 sm:p-4 animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
       onClick={(e) => { if (e.target === e.currentTarget) void handleModalClose(); }}
     >
-      <div className="relative w-[96vw] max-w-xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl border border-gray-100 max-h-[92vh] overflow-y-auto notranslate" translate="no">
+      <div className="relative w-[96vw] max-w-xl rounded-2xl bg-white dark:bg-[#162032] p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-white/10 max-h-[92vh] overflow-y-auto notranslate" translate="no">
 
         {/* Inputs ocultos para cámara y galería */}
         <div id="search-simcard-file-helper" style={{ position: 'fixed', top: -9999, left: -9999, width: 800, height: 600, opacity: 0, pointerEvents: 'none' }} />
@@ -359,20 +351,20 @@ export default function ScanSearchSimModal({
         />
 
         {/* Cabecera */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+            <div className="p-2.5 rounded-xl bg-[#00A3E0]/10 text-[#00A3E0] border border-[#00A3E0]/20">
               <Scan className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-[#3a435d]">{t('modal_escanear_sim')}</h3>
-              <p className="text-xs text-gray-500">{t('modal_escanear_desc')}</p>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{t('modal_escanear_sim')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('modal_escanear_desc')}</p>
             </div>
           </div>
           <button
             onClick={() => void handleModalClose()}
             type="button"
-            className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B] hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -380,7 +372,7 @@ export default function ScanSearchSimModal({
 
         {/* Visor de Cámara */}
         <div className="space-y-4">
-          <div className="relative w-full bg-slate-900 rounded-2xl overflow-hidden min-h-60 sm:min-h-70 flex flex-col items-center justify-center border-2 border-indigo-300 shadow-inner">
+          <div className="relative w-full bg-[#0B111E] rounded-2xl overflow-hidden min-h-60 sm:min-h-70 flex flex-col items-center justify-center border-2 border-[#00A3E0]/30 shadow-inner">
             <div id="search-simcard-reader" className="w-full h-full min-h-60 sm:min-h-70" />
 
             {cameraError && (
@@ -410,12 +402,12 @@ export default function ScanSearchSimModal({
 
             {!isScanning && !cameraError && !scanSuccessCode && !isAnalyzingFile && (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-900/90 text-white gap-3 z-10">
-                <Camera className="w-12 h-12 text-indigo-400 animate-pulse" />
+                <Camera className="w-12 h-12 text-[#00A3E0] animate-pulse" />
                 <p className="text-xs font-semibold text-gray-300">{t('modal_preparando_camara')}</p>
                 <button
                   onClick={startCamera}
                   type="button"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-[#00A3E0] hover:bg-[#0092c8] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   {t('modal_reiniciar_camara')}
                 </button>
@@ -436,11 +428,11 @@ export default function ScanSearchSimModal({
                   <span>{t('modal_apunta_codigo')}</span>
                 </div>
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-                  <div className="w-[84%] max-w-105 h-[68%] max-h-55 border-2 border-dashed border-emerald-400/80 rounded-2xl shadow-[0_0_15px_rgba(52,211,153,0.3)] relative">
-                    <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-emerald-400 rounded-tl" />
-                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-emerald-400 rounded-tr" />
-                    <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-4 border-l-4 border-emerald-400 rounded-bl" />
-                    <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-emerald-400 rounded-br" />
+                  <div className="w-[84%] max-w-105 h-[68%] max-h-55 border-2 border-dashed border-[#00A3E0]/80 rounded-2xl shadow-[0_0_15px_rgba(0,163,224,0.3)] relative">
+                    <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-[#00A3E0] rounded-tl" />
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-[#00A3E0] rounded-tr" />
+                    <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-4 border-l-4 border-[#00A3E0] rounded-bl" />
+                    <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-[#00A3E0] rounded-br" />
                   </div>
                 </div>
               </>
@@ -473,41 +465,41 @@ export default function ScanSearchSimModal({
               type="button"
               onClick={() => galleryInputRef.current?.click()}
               disabled={isAnalyzingFile}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 shadow-2xs"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 dark:bg-[#121927] hover:bg-slate-200 dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
               title="Abrir galería de fotos"
             >
-              <UploadCloud className="w-4 h-4 text-indigo-600" />
+              <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
               <span>{t('buscar_imagen_galeria')}</span>
             </button>
           </div>
 
           {cameraError && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>{cameraError}</span>
             </div>
           )}
 
           {/* Búsqueda manual */}
-          <div className="pt-2 border-t border-gray-100">
-            <label className="block text-xs font-bold text-[#3a435d] mb-1.5">
+          <div className="pt-2 border-t border-slate-200 dark:border-white/10">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               {t('modal_camara_fallback')}
             </label>
             <form onSubmit={handleManualSearch} className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   placeholder={t('modal_buscar_placeholder_sim')}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-xs text-[#3a435d] outline-none focus:border-indigo-500 focus:bg-white transition-all font-mono"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0F1726] py-2.5 pl-9 pr-3 text-xs text-slate-900 dark:text-white outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all font-mono"
                 />
               </div>
               <button
                 type="submit"
                 disabled={!manualCode.trim()}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                className="px-4 py-2.5 bg-[#00A3E0] hover:bg-[#0092c8] disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
               >
                 {t('modal_buscar')}
               </button>
@@ -516,11 +508,11 @@ export default function ScanSearchSimModal({
         </div>
 
         {/* Pie */}
-        <div className="mt-5 pt-3 border-t border-gray-100 flex justify-end">
+        <div className="mt-5 pt-3 border-t border-slate-200 dark:border-white/10 flex justify-end">
           <button
             onClick={() => void handleModalClose()}
             type="button"
-            className="px-5 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+            className="px-5 py-3 rounded-xl bg-slate-100 dark:bg-[#121927] hover:bg-slate-200 dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-xs sm:text-sm font-bold transition-colors cursor-pointer"
           >
             {t('modal_cancelar')}
           </button>

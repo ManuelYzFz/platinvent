@@ -54,7 +54,7 @@ export default function SimCardsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] flex flex-col w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-[#f8f9fc] dark:bg-[#0B111E] flex flex-col w-full max-w-full overflow-x-hidden">
       <Navbar userName={username} onLogout={handleLogout} />
       <main className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-10 py-4 sm:py-8 flex-1">
         <SimCardsView session={session} />

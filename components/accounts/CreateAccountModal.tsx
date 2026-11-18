@@ -28,7 +28,7 @@ export default function CreateAccountModal({ submitting, onClose, onSubmit }: Cr
       title="Nueva Cuenta"
       description="Ingresa los datos para registrar un nuevo usuario."
       icon={<UserPlus className="w-6 h-6" />}
-      iconClassName="bg-[#00acee]/10 text-[#00acee]"
+      iconClassName="bg-[#00A3E0]/10 text-[#00A3E0]"
       onClose={onClose}
       onSubmit={handleSubmit}
       submitLabel="Crear Cuenta"

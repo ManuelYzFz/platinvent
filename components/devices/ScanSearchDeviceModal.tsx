@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 interface ScanSearchDeviceModalProps {
   isOpen: boolean;
@@ -292,17 +293,7 @@ export default function ScanSearchDeviceModal({
     }
   };
 
-  // Bloquear scroll de fondo mientras el modal está abierto
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   useEffect(() => {
     let ignore = false;
@@ -337,10 +328,11 @@ export default function ScanSearchDeviceModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-1.5 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-1.5 sm:p-4 animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
       onClick={(e) => { if (e.target === e.currentTarget) void handleModalClose(); }}
     >
-      <div className="relative w-[96vw] max-w-xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl border border-gray-100 max-h-[92vh] overflow-y-auto notranslate" translate="no">
+      <div className="relative w-[96vw] max-w-xl rounded-2xl bg-white dark:bg-[#162032] p-4 sm:p-6 shadow-2xl border border-slate-200 dark:border-white/14 max-h-[92vh] overflow-y-auto notranslate" translate="no">
 
         {/* Inputs ocultos para cámara y galería */}
         <div id="search-device-file-helper" style={{ position: 'fixed', top: -9999, left: -9999, width: 800, height: 600, opacity: 0, pointerEvents: 'none' }} />
@@ -361,20 +353,20 @@ export default function ScanSearchDeviceModal({
         />
 
         {/* Cabecera */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
+            <div className="p-2.5 rounded-xl bg-[#00A3E0]/10 dark:bg-[#00A3E0]/15 text-[#00A3E0] border border-[#00A3E0]/20">
               <Scan className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-[#3a435d]">{t('escanear_buscar_dispositivo')}</h3>
-              <p className="text-xs text-gray-500">{t('escanear_dispositivo_desc')}</p>
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{t('escanear_buscar_dispositivo')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('escanear_dispositivo_desc')}</p>
             </div>
           </div>
           <button
             onClick={handleModalClose}
             type="button"
-            className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -382,19 +374,19 @@ export default function ScanSearchDeviceModal({
 
         {/* Visor de Cámara */}
         <div className="space-y-4">
-          <div className="relative w-full bg-slate-900 rounded-2xl overflow-hidden min-h-60 sm:min-h-70 flex flex-col items-center justify-center border-2 border-purple-300 shadow-inner">
+          <div className="relative w-full bg-slate-950 rounded-2xl overflow-hidden min-h-60 sm:min-h-70 flex flex-col items-center justify-center border-2 border-[#00A3E0]/40 shadow-inner">
             <div id="search-device-reader" className="w-full h-full min-h-60 sm:min-h-70" />
 
             {cameraError && (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center bg-slate-950/95 text-white gap-3">
                 <ShieldAlert className="w-12 h-12 text-amber-400" />
                 <p className="text-sm font-bold text-amber-300">{t('camara_no_disponible')}</p>
-                <p className="text-xs text-gray-300 max-w-xs">{cameraError}</p>
+                <p className="text-xs text-slate-300 max-w-xs">{cameraError}</p>
                 <div className="flex gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
-                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2 bg-[#00A3E0] hover:bg-[#0092c8] text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                   >
                     <Camera className="w-4 h-4" />
                     <span>{t('tomar_foto_camara')}</span>
@@ -402,7 +394,7 @@ export default function ScanSearchDeviceModal({
                   <button
                     onClick={startCamera}
                     type="button"
-                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-gray-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
                   >
                     {t('reintentar')}
                   </button>
@@ -412,12 +404,12 @@ export default function ScanSearchDeviceModal({
 
             {!isScanning && !cameraError && !scanSuccessCode && !isAnalyzingFile && (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-900/90 text-white gap-3 z-10">
-                <Camera className="w-12 h-12 text-purple-400 animate-pulse" />
-                <p className="text-xs font-semibold text-gray-300">{t('modal_preparando_camara') || 'Preparando cámara...'}</p>
+                <Camera className="w-12 h-12 text-[#00A3E0] animate-pulse" />
+                <p className="text-xs font-semibold text-slate-300">{t('modal_preparando_camara') || 'Preparando cámara...'}</p>
                 <button
                   onClick={startCamera}
                   type="button"
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-[#00A3E0] hover:bg-[#0092c8] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
                   {t('modal_reiniciar_camara') || 'Reiniciar Cámara'}
                 </button>
@@ -425,37 +417,37 @@ export default function ScanSearchDeviceModal({
             )}
 
             {isAnalyzingFile && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-purple-950/90 text-white p-6 text-center gap-3">
-                <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
-                <p className="text-sm font-bold text-purple-200">{t('analizando_codigo_foto')}</p>
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 text-white p-6 text-center gap-3">
+                <Loader2 className="w-10 h-10 text-[#00A3E0] animate-spin" />
+                <p className="text-sm font-bold text-slate-200">{t('analizando_codigo_foto')}</p>
               </div>
             )}
 
             {isScanning && (
               <>
                 <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/75 px-3 py-1.5 rounded-full text-white text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-[#00A3E0] animate-ping" />
                   <span>{t('apunta_qr_o_barras')}</span>
                 </div>
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
-                  <div className="w-[84%] max-w-105 h-[68%] max-h-55 border-2 border-dashed border-purple-400/80 rounded-2xl shadow-[0_0_15px_rgba(168,85,247,0.3)] relative">
-                    <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-purple-400 rounded-tl" />
-                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-purple-400 rounded-tr" />
-                    <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-4 border-l-4 border-purple-400 rounded-bl" />
-                    <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-purple-400 rounded-br" />
+                  <div className="w-[84%] max-w-105 h-[68%] max-h-55 border-2 border-dashed border-[#00A3E0]/80 rounded-2xl shadow-[0_0_15px_rgba(0,163,224,0.3)] relative">
+                    <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-[#00A3E0] rounded-tl" />
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-[#00A3E0] rounded-tr" />
+                    <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-4 border-l-4 border-[#00A3E0] rounded-bl" />
+                    <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-[#00A3E0] rounded-br" />
                   </div>
                 </div>
               </>
             )}
 
             {scanSuccessCode && (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-purple-950/90 text-white p-6 text-center gap-2 animate-in zoom-in-95">
-                <CheckCircle2 className="w-14 h-14 text-purple-400" />
-                <h4 className="text-base font-extrabold text-purple-200">{t('codigo_detectado')}</h4>
-                <p className="font-mono text-sm font-bold bg-purple-900/60 px-4 py-1.5 rounded-lg border border-purple-500/30 text-purple-300">
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 text-white p-6 text-center gap-2 animate-in zoom-in-95">
+                <CheckCircle2 className="w-14 h-14 text-emerald-400" />
+                <h4 className="text-base font-extrabold text-emerald-300">{t('codigo_detectado')}</h4>
+                <p className="font-mono text-sm font-bold bg-[#121927] px-4 py-1.5 rounded-lg border border-[#00A3E0]/40 text-[#00A3E0]">
                   {scanSuccessCode}
                 </p>
-                <p className="text-xs text-purple-300">{t('buscando_dispositivo')}</p>
+                <p className="text-xs text-slate-300">{t('buscando_dispositivo')}</p>
               </div>
             )}
           </div>
@@ -466,51 +458,51 @@ export default function ScanSearchDeviceModal({
               type="button"
               onClick={() => cameraInputRef.current?.click()}
               disabled={isAnalyzingFile}
-              className="flex-1 flex items-center justify-center gap-2.5 py-3 px-4 bg-purple-600 hover:bg-purple-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2.5 py-3 px-4 bg-[#00A3E0] hover:bg-[#0092c8] active:scale-98 text-white rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer disabled:opacity-50"
             >
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-purple-200" />
+              <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <span>{t('tomar_foto_camara')}</span>
             </button>
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
               disabled={isAnalyzingFile}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 shadow-2xs"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
               title="Abrir galería de imágenes o archivos"
             >
-              <UploadCloud className="w-4 h-4 text-purple-600" />
+              <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
               <span>{t('buscar_imagen_galeria')}</span>
             </button>
           </div>
 
           {cameraError && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2.5">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>{cameraError}</span>
             </div>
           )}
 
           {/* Búsqueda Manual / Código */}
-          <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#3a435d]">
-              <HardDrive className="w-4 h-4 text-purple-600" />
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+              <HardDrive className="w-4 h-4 text-[#00A3E0]" />
               <span>{t('preferir_escribir_devidno')}</span>
             </div>
 
             <form onSubmit={handleManualSearch} className="flex gap-2">
               <div className="relative flex-1">
-                <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                <Barcode className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   placeholder="Ej. 4142434445 o 864521041234567"
-                  className="w-full pl-9 pr-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-mono text-gray-800 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                  className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-[#121927] border border-slate-200 dark:border-white/10 rounded-xl text-xs font-mono text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0]"
                 />
               </div>
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 bg-[#00A3E0] hover:bg-[#0092c8] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <Search className="w-3.5 h-3.5" />
                 <span>{t('modal_buscar') || 'Buscar'}</span>
@@ -520,11 +512,11 @@ export default function ScanSearchDeviceModal({
         </div>
 
         {/* Pie */}
-        <div className="mt-5 pt-3 border-t border-gray-100 flex justify-end">
+        <div className="mt-5 pt-3 border-t border-slate-200 dark:border-white/10 flex justify-end">
           <button
             onClick={handleModalClose}
             type="button"
-            className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition-colors cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 text-xs font-bold transition-colors cursor-pointer"
           >
             {t('modal_cancelar') || 'Cancelar'}
           </button>

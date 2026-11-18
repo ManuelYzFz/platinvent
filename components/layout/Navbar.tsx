@@ -74,7 +74,10 @@ export default function Navbar({ userName = 'Usuario Vtraxx', onLogout }: Navbar
 
             {/* Cápsula de Usuario Oficial VTRAXX (estilo FacturApp) */}
             <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-[#E2E8F0] dark:border-white/15 bg-[#F8FAFC] dark:bg-[#162032] shadow-2xs">
-              <div className="w-6 h-6 rounded-full bg-[#00A3E0] text-white flex items-center justify-center text-[11px] font-black uppercase shrink-0">
+              <div 
+                suppressHydrationWarning
+                className="w-6 h-6 rounded-full bg-[#00A3E0] text-white flex items-center justify-center text-[11px] font-black uppercase shrink-0"
+              >
                 {(userName || 'V').charAt(0)}
               </div>
               <div className="flex flex-col text-left leading-tight">

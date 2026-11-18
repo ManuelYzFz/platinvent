@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Scan, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Scan, AlertTriangle, Truck, Package } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n';
 import { getUserRole } from '@/lib/utils/storage';
 import { useDevicesInventory, PAGE_SIZE } from './useDevicesInventory';
@@ -236,58 +236,58 @@ export default function DevicesView({ session }: DevicesViewProps) {
         {/* Lámina 1: Vendidos / Instalados */}
         <div
           onClick={() => setExpandedRows((prev) => ({ ...prev, installedDevices: !prev.installedDevices }))}
-          className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl border transition-all cursor-pointer select-none bg-white dark:bg-[#161B22] dark:border-[#30363d] dark:hover:bg-[#1c2128] ${
+          className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl border transition-all cursor-pointer select-none bg-white dark:bg-[#162032] hover:translate-y-[-2px] ${
             expandedRows.installedDevices
-              ? 'border-emerald-400 bg-emerald-50/60 dark:bg-[#161B22]'
-              : 'border-emerald-200 bg-white hover:bg-emerald-50/40 dark:bg-[#161B22]'
+              ? 'border-emerald-500/50 dark:border-emerald-500/60 ring-1 ring-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06]'
+              : 'border-[#E2E8F0] dark:border-white/10 hover:border-emerald-500/30'
           }`}
         >
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 group-hover:scale-105 transition-transform shrink-0">
-              <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/25 group-hover:scale-105 transition-transform shrink-0">
+              <Truck className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-[#21262d] dark:text-gray-300 dark:border-[#30363d]">
+                <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
                   {expandedRows.installedDevices ? t('mostrando_tabla') : t('clic_desplegar')}
                 </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#3a435d] dark:text-white">{t('vendidos_instalados')}</h3>
-              <p className="text-xs text-[#5c647b] dark:text-gray-400">{t('dispositivos_activos_vehiculos')}</p>
+              <h3 className="text-lg sm:text-xl font-black text-[#0F172A] dark:text-white">{t('vendidos_instalados')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('dispositivos_activos_vehiculos')}</p>
             </div>
           </div>
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-emerald-100 dark:border-[#30363d]">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{installedDevices.length}</div>
-            <div className="text-xs font-bold text-emerald-700/80 dark:text-emerald-400/80">{t('unidades')}</div>
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-[#E2E8F0] dark:border-white/10">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400">{installedDevices.length}</div>
+            <div className="text-xs font-bold text-emerald-600/80 dark:text-emerald-400/80">{t('unidades')}</div>
           </div>
         </div>
 
         {/* Lámina 2: Disponibles en Bodega */}
         <div
           onClick={() => setExpandedRows((prev) => ({ ...prev, uninstalledDevices: !prev.uninstalledDevices }))}
-          className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl border transition-all cursor-pointer select-none bg-white dark:bg-[#161B22] dark:border-[#30363d] dark:hover:bg-[#1c2128] ${
+          className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 rounded-2xl border transition-all cursor-pointer select-none bg-white dark:bg-[#162032] hover:translate-y-[-2px] ${
             expandedRows.uninstalledDevices
-              ? 'border-amber-400 bg-amber-50/60 dark:bg-[#161B22]'
-              : 'border-amber-200 bg-white hover:bg-amber-50/40 dark:bg-[#161B22]'
+              ? 'border-amber-500/50 dark:border-amber-500/60 ring-1 ring-amber-500/30 bg-amber-500/[0.03] dark:bg-amber-500/[0.06]'
+              : 'border-[#E2E8F0] dark:border-white/10 hover:border-amber-500/30'
           }`}
         >
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 group-hover:scale-105 transition-transform shrink-0">
-              <XCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/25 group-hover:scale-105 transition-transform shrink-0">
+              <Package className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-[#21262d] dark:text-gray-300 dark:border-[#30363d]">
+                <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
                   {expandedRows.uninstalledDevices ? t('mostrando_tabla') : t('clic_desplegar')}
                 </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#3a435d] dark:text-white">{t('disponibles_bodega')}</h3>
-              <p className="text-xs text-[#5c647b] dark:text-gray-400">{t('dispositivos_no_vinculados')}</p>
+              <h3 className="text-lg sm:text-xl font-black text-[#0F172A] dark:text-white">{t('disponibles_bodega')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('dispositivos_no_vinculados')}</p>
             </div>
           </div>
-          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-amber-100 dark:border-[#30363d]">
-            <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">{uninstalledDevices.length}</div>
-            <div className="text-xs font-bold text-amber-700/80 dark:text-amber-400/80">{t('unidades')}</div>
+          <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-[#E2E8F0] dark:border-white/10">
+            <div className="text-2xl sm:text-3xl font-black text-amber-500 dark:text-amber-400">{uninstalledDevices.length}</div>
+            <div className="text-xs font-bold text-amber-600/80 dark:text-amber-400/80">{t('unidades')}</div>
           </div>
         </div>
       </div>

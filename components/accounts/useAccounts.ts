@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { UserRole } from '@/lib/utils/storage';
 import type { AccountItem } from './account-helpers';
+import { toast } from '@/components/common/Toast';
 
 async function sendAccountRequest(method: 'POST' | 'PUT', body: Record<string, unknown>, fallbackError: string) {
   const res = await fetch('/api/local-accounts', {
@@ -73,10 +74,13 @@ export function useAccounts(currentUsername: string) {
     try {
       await sendAccountRequest(method, body, fallbackError);
       setSuccessBanner(successMessage);
+      toast.success(successMessage);
       if (refresh) void fetchAccounts(false);
       return true;
     } catch (err) {
-      setErrorBanner(err instanceof Error ? err.message : fallbackError);
+      const errMsg = err instanceof Error ? err.message : fallbackError;
+      setErrorBanner(errMsg);
+      toast.error(errMsg);
       return false;
     } finally {
       setSubmitting(false);

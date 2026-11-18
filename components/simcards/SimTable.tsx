@@ -46,19 +46,19 @@ export function SimTable({
   const isAssigned = type === 'assigned';
 
   const headerBg = isAssigned
-    ? 'bg-emerald-50/60 dark:bg-[#161B22] border-emerald-100 dark:border-[#30363d] hover:bg-emerald-100/50 dark:hover:bg-[#1c2128]'
-    : 'bg-amber-50/60 dark:bg-[#161B22] border-amber-100 dark:border-[#30363d] hover:bg-amber-100/50 dark:hover:bg-[#1c2128]';
+    ? 'bg-emerald-50/70 dark:bg-[#121927] border-emerald-100/60 dark:border-white/10 hover:bg-emerald-100/40 dark:hover:bg-[#162032]'
+    : 'bg-amber-50/70 dark:bg-[#121927] border-amber-100/60 dark:border-white/10 hover:bg-amber-100/40 dark:hover:bg-[#162032]';
 
   const dotBg = isAssigned ? 'bg-emerald-500' : 'bg-amber-500';
 
   const countBadge = isAssigned
-    ? 'text-emerald-800 dark:text-emerald-400 bg-white dark:bg-[#21262d] border-emerald-200 dark:border-[#30363d]'
-    : 'text-amber-800 dark:text-amber-400 bg-white dark:bg-[#21262d] border-amber-200 dark:border-[#30363d]';
+    ? 'text-emerald-700 dark:text-emerald-300 bg-white/90 dark:bg-[#162032] border-emerald-200 dark:border-white/10'
+    : 'text-amber-700 dark:text-amber-300 bg-white/90 dark:bg-[#162032] border-amber-200 dark:border-white/10';
 
-  const chevronColor = isAssigned ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400';
+  const chevronColor = isAssigned ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400';
 
   return (
-    <div className="w-full max-w-full min-w-0 rounded-2xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#161B22] shadow-xs overflow-hidden">
+    <div className="w-full max-w-full min-w-0 rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#162032] shadow-xs overflow-hidden">
       {/* Encabezado colapsable */}
       <div
         onClick={onToggleExpand}
@@ -67,12 +67,12 @@ export function SimTable({
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${dotBg} shadow-xs`} />
           <div>
-            <h2 className="text-sm sm:text-base font-extrabold text-[#3a435d] dark:text-white">{title}</h2>
-            <p className="text-xs text-[#5c647b] dark:text-gray-400">{subtitle}</p>
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{title}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`text-xs font-extrabold px-3 py-1 rounded-full border shadow-xs ${countBadge}`}>
+          <span className={`text-xs font-bold px-3 py-1 rounded-full border shadow-2xs ${countBadge}`}>
             {sims.length} {t('unidades')}
           </span>
           {isExpanded ? (
@@ -86,8 +86,8 @@ export function SimTable({
       {isExpanded && (
         <>
           <div className="w-full overflow-x-auto scrollbar-thin">
-            <table className="min-w-175 w-full text-left text-xs text-[#3a435d] dark:text-gray-200">
-              <thead className="bg-[#f8f9fc] dark:bg-[#0d1117] text-[11px] font-extrabold uppercase tracking-wider text-[#5c647b] dark:text-gray-400 border-b border-[#e8e9ed] dark:border-[#30363d]">
+            <table className="min-w-175 w-full text-left text-xs text-slate-800 dark:text-slate-200">
+              <thead className="bg-slate-50 dark:bg-[#121927] text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/10">
                 <tr>
                   <th className="px-2 py-2 text-center w-10">#</th>
                   <th className="px-2 py-2">{t('iccid_sim')}</th>
@@ -102,10 +102,10 @@ export function SimTable({
                   <th className="px-2 py-2 text-center whitespace-nowrap">{t('acciones_col') || 'Acciones'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8e9ed] dark:divide-[#30363d]">
+              <tbody className="divide-y divide-slate-200/80 dark:divide-white/10">
                 {sims.length === 0 ? (
                   <tr>
-                    <td colSpan={isAssigned ? 9 : 8} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={isAssigned ? 9 : 8} className="px-4 py-8 text-center text-xs text-slate-500 dark:text-slate-400 italic">
                       {emptyMessage}
                     </td>
                   </tr>

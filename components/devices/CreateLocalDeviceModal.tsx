@@ -37,6 +37,7 @@ import { formatDate } from '@/lib/utils/date-format';
 import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
 import CreatableSelect from '@/components/common/CreatableSelect';
 import { useDeviceOptions } from '@/components/devices/useDeviceOptions';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 export { BRAND_OPTIONS, MODEL_OPTIONS };
 
@@ -499,16 +500,7 @@ export default function CreateLocalDeviceModal({
     return formatDate();
   }, [install, selectedVehicleVid, customVehiclePlate]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
@@ -668,21 +660,22 @@ export default function CreateLocalDeviceModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-200 notranslate"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-contain notranslate"
+      onWheel={(e) => e.stopPropagation()}
       translate="no"
     >
-      <div className="w-full sm:max-w-2xl bg-white dark:bg-[#161b22] rounded-t-2xl sm:rounded-2xl border border-[#e8e9ed] dark:border-[#30363d] shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+      <div className="w-full sm:max-w-2xl bg-white dark:bg-[#162032] rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-white/14 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
         {/* Header fijo */}
-        <div className="shrink-0 flex items-center justify-between border-b border-[#e8e9ed] dark:border-[#30363d] px-5 py-4 bg-white dark:bg-[#161b22]">
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-200 dark:border-white/10 px-5 py-4 bg-slate-50/70 dark:bg-[#121927]">
           <div className="flex items-center gap-2.5">
-            <div className="rounded-xl bg-[#3a435d] dark:bg-[#21262d] p-2.5 text-[#00acee]">
+            <div className="rounded-xl bg-[#00A3E0]/10 dark:bg-[#00A3E0]/15 p-2.5 text-[#00A3E0] border border-[#00A3E0]/20">
               <HardDrive className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#3a435d] dark:text-white">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {t('modal_agregar_dispositivo')}
               </h3>
-              <p className="text-xs text-[#5c647b] dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {t('modal_dispositivo_desc')}
               </p>
             </div>
@@ -690,7 +683,7 @@ export default function CreateLocalDeviceModal({
           <button
             onClick={handleModalClose}
             type="button"
-            className="rounded-lg p-2 text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#21262d] hover:text-[#3a435d] dark:hover:text-white transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200/60 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
           >
             <X className="h-5 w-5" />
           </button>
@@ -700,7 +693,7 @@ export default function CreateLocalDeviceModal({
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:py-5">
 
         {errorMessage && (
-          <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-xs font-medium text-red-700 dark:text-red-300">
+          <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 p-3 text-xs font-semibold text-red-700 dark:text-red-300">
             {errorMessage}
           </div>
         )}
@@ -708,11 +701,11 @@ export default function CreateLocalDeviceModal({
         <form id="device-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 font-sans">
 
           {/* Sección de Escaneo con Cámara / Código de Barras */}
-          <div className="rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#0d1117] p-4 sm:p-5 space-y-3.5">
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-[#0F1726] p-4 sm:p-5 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Scan className="w-4 h-4 sm:w-5 sm:h-5 text-[#00acee]" />
-                <span className="text-xs sm:text-sm font-bold text-[#3a435d] dark:text-gray-200 uppercase tracking-wider">
+                <Scan className="w-4 h-4 sm:w-5 sm:h-5 text-[#00A3E0]" />
+                <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Escáner de Cámara
                 </span>
               </div>
@@ -720,7 +713,7 @@ export default function CreateLocalDeviceModal({
                 <button
                   type="button"
                   onClick={() => void startCamera()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00acee] hover:bg-[#0098d4] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
                 >
                   <Camera className="w-4 h-4" />
                   <span>{t('activar_camara') || 'Activar Cámara'}</span>
@@ -759,7 +752,7 @@ export default function CreateLocalDeviceModal({
 
             {/* Visor de Cámara */}
             {isScanning && (
-              <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 bg-black min-h-65 md:min-h-75 flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden border-2 border-[#00A3E0] bg-black min-h-65 md:min-h-75 flex items-center justify-center">
                 <div id="device-barcode-reader" className="w-full h-full min-h-65 md:min-h-75" />
               </div>
             )}
@@ -786,10 +779,10 @@ export default function CreateLocalDeviceModal({
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
                 disabled={isAnalyzingFile}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#21262d] dark:hover:bg-[#30363d] active:scale-98 text-slate-700 dark:text-gray-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-[#30363d] shadow-2xs"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
                 title="Abrir galería de fotos"
               >
-                <UploadCloud className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
                 <span>{t('buscar_imagen_galeria') || 'Buscar imagen (Galería)'}</span>
               </button>
             </div>
@@ -813,8 +806,8 @@ export default function CreateLocalDeviceModal({
           {/* Fila 1: device No & serie de dispositivo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                <HardDrive className="w-4 h-4 text-[#00acee]" />
+              <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-[#00A3E0]" />
                 {t('modal_id_dispositivo_label')} <span className="text-red-500">*</span>
               </label>
               <input
@@ -823,14 +816,14 @@ export default function CreateLocalDeviceModal({
                 maxLength={MAX_LENGTHS.device.devidno}
                 onChange={(e) => setDevIDNO(e.target.value)}
                 placeholder="Ej. 4142434445"
-                className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono font-bold outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono font-bold outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                 required
               />
             </div>
 
             <div>
-              <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                <Hash className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                <Hash className="w-4 h-4 text-slate-400" />
                 {t('serie_dispositivo')}
               </label>
               <input
@@ -839,7 +832,7 @@ export default function CreateLocalDeviceModal({
                 maxLength={MAX_LENGTHS.device.serial_id}
                 onChange={(e) => setSerialID(e.target.value)}
                 placeholder="Ej. 4142434445"
-                className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
               />
             </div>
           </div>
@@ -847,7 +840,7 @@ export default function CreateLocalDeviceModal({
           {/* Fila 2: IMEI & SimCard (Combobox que autocompleta actualCardNumber) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
+              <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                 <Barcode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 IMEI
               </label>
@@ -858,14 +851,14 @@ export default function CreateLocalDeviceModal({
                 inputMode="numeric"
                 onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))}
                 placeholder="Ej. 490154203237518"
-                className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-2xs"
               />
             </div>
 
             {/* SimCard Combobox */}
             <div className="relative" ref={simComboboxRef}>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 flex items-center gap-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                   <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   SimCard
                 </label>
@@ -876,7 +869,7 @@ export default function CreateLocalDeviceModal({
                       setSimInfo('');
                       setActualCardNumber('');
                     }}
-                    className="text-[11px] text-gray-400 hover:text-red-500 font-semibold cursor-pointer"
+                    className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                   >
                     Limpiar
                   </button>
@@ -891,13 +884,13 @@ export default function CreateLocalDeviceModal({
                   onChange={(e) => handleSimInputChange(e.target.value)}
                   onFocus={() => setIsSimDropdownOpen(true)}
                   placeholder="Selecciona o escribe un SimCard..."
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 pl-4 pr-10 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 pl-4 pr-10 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-2xs"
                 />
                 <button
                   type="button"
                   tabIndex={-1}
                   onClick={() => setIsSimDropdownOpen((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
                 >
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSimDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -905,9 +898,9 @@ export default function CreateLocalDeviceModal({
 
               {/* Desplegable del Combobox con todos los SimCards */}
               {isSimDropdownOpen && (
-                <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#161b22] shadow-xl py-1 animate-in fade-in-50 duration-150">
+                <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/14 bg-white dark:bg-[#162032] shadow-xl py-1 animate-in fade-in-50 duration-150">
                   {filteredSims.length === 0 ? (
-                    <div className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 text-center">
+                    <div className="px-4 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">
                       No se encontraron SimCards que coincidan
                     </div>
                   ) : (
@@ -920,7 +913,7 @@ export default function CreateLocalDeviceModal({
                           className={`px-4 py-2.5 flex items-center justify-between cursor-pointer transition-colors text-xs sm:text-sm ${
                             isSelected
                               ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-bold'
-                              : 'hover:bg-slate-50 dark:hover:bg-[#21262d] text-[#3a435d] dark:text-gray-200'
+                              : 'hover:bg-slate-50 dark:hover:bg-[#1E293B] text-slate-800 dark:text-slate-200'
                           }`}
                         >
                           <div className="flex flex-col gap-0.5">
@@ -932,7 +925,7 @@ export default function CreateLocalDeviceModal({
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                               <span>Tel: <strong className="font-mono">{sim.cardNum || 'N/A'}</strong></span>
                               {sim.companyName && <span>• {sim.companyName}</span>}
                             </div>
@@ -950,13 +943,13 @@ export default function CreateLocalDeviceModal({
           {/* Fila 3: Actual Card Number & Tipo de Dispositivo */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center justify-between">
+              <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <Phone className="w-4 h-4 text-[#00A3E0]" />
                   Actual Card Number
                 </span>
                 {actualCardNumber && simInfo && (
-                  <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                  <span className="text-[11px] font-semibold text-[#00A3E0]">
                     Asociado a SimCard
                   </span>
                 )}
@@ -967,12 +960,12 @@ export default function CreateLocalDeviceModal({
                 maxLength={MAX_LENGTHS.simcard.card_number}
                 onChange={(e) => setActualCardNumber(e.target.value)}
                 placeholder="Ej. +56987654321"
-                className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+              <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                 {t('modal_tipo_dispositivo_label')} <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2.5">
@@ -981,11 +974,11 @@ export default function CreateLocalDeviceModal({
                   onClick={() => setDevType(7)}
                   className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
                     devType === 7
-                      ? 'border-[#00acee] bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#3a435d] dark:text-[#38bdf8] shadow-xs'
-                      : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                      ? 'border-[#00A3E0] bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] shadow-xs'
+                      : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                   }`}
                 >
-                  <Cpu className="h-4 w-4 text-[#00acee]" />
+                  <Cpu className="h-4 w-4 text-[#00A3E0]" />
                   <span>7 - DVR</span>
                 </button>
 
@@ -995,7 +988,7 @@ export default function CreateLocalDeviceModal({
                   className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
                     devType === 5
                       ? 'border-indigo-500 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-300 shadow-xs'
-                      : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                      : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                   }`}
                 >
                   <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -1009,14 +1002,14 @@ export default function CreateLocalDeviceModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200">
+                <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   {t('modal_marca_label')}
                 </label>
                 {onOpenManageCatalog && (
                   <button
                     type="button"
                     onClick={onOpenManageCatalog}
-                    className="text-xs font-bold text-[#00acee] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                    className="text-xs font-bold text-[#00A3E0] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                     title="Administrar catálogo de marcas y modelos"
                   >
                     <Settings2 className="w-3.5 h-3.5" />
@@ -1043,7 +1036,7 @@ export default function CreateLocalDeviceModal({
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+              <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                 {t('modal_modelo_label')}
               </label>
               <CreatableSelect
@@ -1062,7 +1055,7 @@ export default function CreateLocalDeviceModal({
           {/* Fila 5: Estado install y Estado de Servicio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+              <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                 {t('modal_estado_instalacion_label')} <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -1075,7 +1068,7 @@ export default function CreateLocalDeviceModal({
                   className={`flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     install === 1
                       ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 shadow-xs'
-                      : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                      : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                   }`}
                 >
                   <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -1093,7 +1086,7 @@ export default function CreateLocalDeviceModal({
                   className={`flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                     install === 0
                       ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-xs'
-                      : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                      : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                   }`}
                 >
                   <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -1103,14 +1096,14 @@ export default function CreateLocalDeviceModal({
             </div>
 
             <div>
-              <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-[#00acee]" />
+              <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-[#00A3E0]" />
                 {t('estado_servicio_label') || 'Estado de Servicio'} <span className="text-red-500">*</span>
               </label>
               <select
                 value={serviceStatus}
                 onChange={(e) => setServiceStatus(e.target.value as 'active' | 'inactive')}
-                className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base font-semibold text-[#3a435d] dark:text-white outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base font-semibold text-slate-800 dark:text-white outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs cursor-pointer"
               >
                 <option value="active">🟢 {t('servicio_activo') || 'Servicio Activo'}</option>
                 <option value="inactive">🟠 {t('sin_servicio') || 'Sin Servicio'}</option>
@@ -1119,11 +1112,11 @@ export default function CreateLocalDeviceModal({
           </div>
 
           {/* Fila 6: Empresa y Vehículo Asignado */}
-          <div className="pt-3 border-t border-[#e8e9ed] dark:border-[#30363d] space-y-4">
+          <div className="pt-3 border-t border-slate-200 dark:border-white/10 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-[#00acee]" />
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#00A3E0]" />
                   {t('modal_compania_label')} {install === 1 && <span className="text-red-500">*</span>}
                 </label>
                 <select
@@ -1138,10 +1131,10 @@ export default function CreateLocalDeviceModal({
                     setSelectedVehicleVid('');
                     setCustomVehiclePlate('');
                   }}
-                  className={`w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all shadow-2xs ${
+                  className={`w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all shadow-2xs ${
                     install !== 1
-                      ? 'bg-gray-100 dark:bg-[#161b22] text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                      : 'bg-white dark:bg-[#0d1117] text-[#3a435d] dark:text-white focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 cursor-pointer'
+                      ? 'bg-slate-100 dark:bg-[#121927] text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] cursor-pointer'
                   }`}
                   required={install === 1}
                 >
@@ -1149,7 +1142,7 @@ export default function CreateLocalDeviceModal({
                     {install === 1 ? t('modal_selecciona_compania') : t('modal_no_aplica_no_instalado')}
                   </option>
                   {install === 1 && (
-                    <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-blue-600 dark:text-blue-400">
+                    <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-[#00A3E0] dark:text-[#00A3E0]">
                       {t('registrar_empresa_opcion') || '+ Registrar Empresa / Cliente...'}
                     </option>
                   )}
@@ -1160,10 +1153,10 @@ export default function CreateLocalDeviceModal({
                   ))}
                 </select>
                 {install === 1 && selectedCompany === '__REGISTER_NEW_COMPANY__' && (
-                  <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0c1c2e] border border-blue-200 dark:border-[#1e3a5f] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                  <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0F1726] border border-blue-200 dark:border-[#00A3E0]/30 rounded-xl space-y-1.5 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <Building2 className="w-3.5 h-3.5 text-[#00A3E0]" />
                         {t('nombre_nueva_empresa') || 'Registrar nueva empresa / cliente:'} <span className="text-red-500">*</span>
                       </label>
                       <button
@@ -1172,7 +1165,7 @@ export default function CreateLocalDeviceModal({
                           setSelectedCompany('');
                           setCustomCompanyName('');
                         }}
-                        className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                        className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                       >
                         {t('cancelar') || 'Cancelar'}
                       </button>
@@ -1184,20 +1177,20 @@ export default function CreateLocalDeviceModal({
                       maxLength={MAX_LENGTHS.company.name}
                       onChange={(e) => setCustomCompanyName(e.target.value)}
                       placeholder="Ej: Transportes del Norte SpA"
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-blue-300 dark:border-blue-700 rounded-lg text-sm font-semibold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#121927] border border-blue-300 dark:border-white/10 rounded-lg text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#00A3E0] shadow-2xs"
                       autoFocus
                     />
                   </div>
                 )}
                 {install !== 1 && (
-                  <p className="text-xs text-gray-400 mt-1.5 italic">
+                  <p className="text-xs text-slate-400 mt-1.5 italic">
                     {t('modal_solo_instalado')}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                   <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   {t('modal_vehiculo_label')} {install === 1 && <span className="text-red-500">*</span>}
                 </label>
@@ -1211,10 +1204,10 @@ export default function CreateLocalDeviceModal({
                       setCustomVehiclePlate('');
                     }
                   }}
-                  className={`w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all font-mono shadow-2xs ${
+                  className={`w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all font-mono shadow-2xs ${
                     install !== 1 || !selectedCompany
-                      ? 'bg-gray-100 dark:bg-[#161b22] text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                      : 'bg-white dark:bg-[#0d1117] text-[#3a435d] dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer'
+                      ? 'bg-slate-100 dark:bg-[#121927] text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer'
                   }`}
                   required={install === 1}
                 >
@@ -1245,7 +1238,7 @@ export default function CreateLocalDeviceModal({
                 </select>
 
                 {install === 1 && selectedCompany && selectedVehicleVid === '__REGISTER_NEW_VEHICLE__' && (
-                  <div className="mt-2.5 p-3 bg-emerald-50/70 dark:bg-[#0c2317] border border-emerald-200 dark:border-[#14532d] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                  <div className="mt-2.5 p-3 bg-emerald-50/70 dark:bg-[#0F1726] border border-emerald-200 dark:border-emerald-800/40 rounded-xl space-y-1.5 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
                         <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1257,7 +1250,7 @@ export default function CreateLocalDeviceModal({
                           setSelectedVehicleVid('');
                           setCustomVehiclePlate('');
                         }}
-                        className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                        className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                       >
                         {t('cancelar') || 'Cancelar'}
                       </button>
@@ -1269,7 +1262,7 @@ export default function CreateLocalDeviceModal({
                       maxLength={MAX_LENGTHS.vehicle.plate_number}
                       onChange={(e) => setCustomVehiclePlate(e.target.value.toUpperCase())}
                       placeholder="Ej: AB-123-CD o ABCD-12"
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-emerald-300 dark:border-emerald-700 rounded-lg text-sm font-mono font-bold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-2xs uppercase"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#121927] border border-emerald-300 dark:border-emerald-700 rounded-lg text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs uppercase"
                       autoFocus
                     />
                   </div>
@@ -1290,40 +1283,40 @@ export default function CreateLocalDeviceModal({
             </div>
 
             {/* Fecha de Asignación */}
-            <div className="p-4 rounded-xl bg-[#f8f9fc] dark:bg-[#131722] border border-[#e8e9ed] dark:border-[#30363d] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-[#5c647b] dark:text-gray-400">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               <div className="flex items-center gap-2 font-medium">
-                <Clock className="w-4 h-4 text-[#00acee]" />
+                <Clock className="w-4 h-4 text-[#00A3E0]" />
                 <span>{t('fecha_asignacion') || 'Fecha de Asignación'}</span>
               </div>
-              <span className="font-mono font-bold text-[#3a435d] dark:text-gray-200 bg-white dark:bg-[#1a202c] px-3 py-1.5 rounded-md border border-[#e8e9ed] dark:border-[#30363d]">
+              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#121927] px-3 py-1.5 rounded-md border border-slate-200 dark:border-white/10">
                 {previewAssignmentDate ? previewAssignmentDate : t('sin_fecha_asignada')}
               </span>
             </div>
 
             {/* Generación Automática de Código QR */}
-            <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-[#1a1226] border border-purple-200/80 dark:border-[#4c1d95] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-purple-900 dark:text-purple-200">
+            <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-[#0F1726] border border-purple-200/80 dark:border-purple-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-purple-900 dark:text-purple-200">
               <div className="flex items-center gap-2 font-medium">
                 <QrCode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 <span>{t('generacion_codigo_qr')}</span>
               </div>
-              <span className="font-mono text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 bg-white dark:bg-[#241738] px-3 py-1.5 rounded-md border border-purple-200 dark:border-[#581c87]">
+              <span className="font-mono text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 bg-white dark:bg-[#121927] px-3 py-1.5 rounded-md border border-purple-200 dark:border-purple-800">
                 {devIDNO.trim() ? `${t('qr_listo')} (ID: ${devIDNO.trim()}${imei.trim() ? ` | IMEI: ${imei.trim()}` : ''})` : t('ingresa_devidno_qr')}
               </span>
             </div>
           </div>
 
           {/* Botones */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e8e9ed] dark:border-[#30363d]">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
             <button
               type="button"
               onClick={handleModalClose}
-              className="rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] px-5 py-3 text-sm font-bold text-[#5c647b] dark:text-gray-300 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42] transition-colors cursor-pointer min-h-11"
+              className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#121927] px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] transition-colors cursor-pointer min-h-11"
             >
               {t('modal_cancelar')}
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-[#00acee] hover:bg-[#0099d4] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all cursor-pointer min-h-11"
+              className="flex items-center gap-2 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] px-6 py-3 text-sm font-bold text-white shadow-xs transition-all cursor-pointer min-h-11"
             >
               <Plus className="h-4 w-4 text-white" />
               <span>{t('modal_guardar_dispositivo')}</span>

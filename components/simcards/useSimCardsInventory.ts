@@ -12,6 +12,7 @@ import {
   formatRegistrationTime,
   getMatchedPatent,
 } from './sim-helpers';
+import { toast } from '@/components/common/Toast';
 import {
   getOfflineSims,
   saveOfflineSims,
@@ -275,6 +276,7 @@ export function useSimCardsInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+      toast.info('Actualización de SIM guardada offline');
       return;
     }
 
@@ -286,14 +288,18 @@ export function useSimCardsInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos: no se pudo guardar.');
       } else if (!res.ok) {
         await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+        toast.info('Actualización de SIM pendiente de sincronizar');
       } else {
+        toast.success(`SIM Card ${updatedSim.cardNum || updatedSim.simCard || ''} actualizada`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al actualizar SIM Card, encolando offline:', err);
       await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+      toast.info('Actualización de SIM guardada offline');
     }
   };
 
