@@ -87,14 +87,14 @@ export function DeviceActionBar({
               type="file"
               ref={fileInputRef}
               onChange={onImport}
-              accept=".json, .csv"
+              accept=".json, .csv, .xlsx"
               className="hidden"
             />
             <button
               onClick={() => fileInputRef.current?.click()}
               type="button"
               className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-[#00acee] hover:bg-[#0099d4] px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-base font-extrabold text-white shadow-sm transition-all cursor-pointer hover:shadow active:scale-95 border border-[#00acee]"
-              title="Cargar archivo CSV o JSON"
+              title="Cargar archivo CSV, JSON o Excel"
             >
               <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-white shrink-0" />
               <span className="truncate">{t('importar') || 'Importar'}</span>

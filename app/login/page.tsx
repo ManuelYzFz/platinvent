@@ -7,6 +7,7 @@ import { User, Lock, Eye, EyeOff, LogIn, CheckCircle2, AlertCircle, WifiOff, Inf
 import GoogleTranslator from '@/components/layout/GoogleTranslator';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import Preloader from '@/components/layout/Preloader';
+import Footer from '@/components/layout/Footer';
 import { useTranslation } from '@/lib/i18n';
 import { getSession, getRememberedUsername, saveSession } from '@/lib/utils/storage';
 
@@ -136,14 +137,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen w-full bg-[#f2f3f7] flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans selection:bg-[#00acee]/20 relative">
+    <div className="min-h-screen w-full bg-[#f2f3f7] dark:bg-[#0b1329] flex flex-col font-sans selection:bg-[#00acee]/20 relative">
       {/* Botón flotante para cambiar de tema (Modo Oscuro / Claro) */}
       <div className="fixed top-4 right-4 sm:top-6 sm:right-6 z-30">
         <ThemeToggle />
       </div>
 
-      {/* Cuadro central blanco */}
-      <div className="w-full max-w-md bg-white border border-[#e8e9ed] rounded-2xl p-8 sm:p-10 shadow-sm transition-all duration-300 hover:shadow-md relative">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        {/* Cuadro central blanco */}
+        <div className="w-full max-w-md bg-white border border-[#e8e9ed] rounded-2xl p-8 sm:p-10 shadow-sm transition-all duration-300 hover:shadow-md relative">
         
         {/* Logo Vtraxx y Encabezado */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -333,14 +335,10 @@ export default function LoginPage() {
             <GoogleTranslator />
           </div>
         </form>
-
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-[#e8e9ed] text-center">
-          <p className="text-xs text-[#5c647b]">
-            © {new Date().getFullYear()} Vtraxx Plataforma. {t('derechos_reservados')}
-          </p>
-        </div>
       </div>
-    </main>
+      </main>
+
+      <Footer />
+    </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import SimCardsView from '@/components/simcards/SimCardsView';
 import { getSession, getUsername, clearSession } from '@/lib/utils/storage';
 
@@ -58,6 +59,7 @@ export default function SimCardsPage() {
       <main className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-10 py-4 sm:py-8 flex-1">
         <SimCardsView session={session} />
       </main>
+      <Footer />
     </div>
   );
 }

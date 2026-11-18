@@ -102,28 +102,27 @@ export function DeviceTable({
       {isExpanded && (
         <>
           <div className="w-full overflow-x-auto scrollbar-thin">
-            <table className={`min-w-190 w-full text-left text-xs border-collapse ${isIndefinite ? 'min-w-215 sm:text-sm' : ''}`}>
+            <table className="w-full table-fixed min-w-[1200px] text-left text-xs border-collapse">
               <thead>
                 <tr className={`${theadClass} text-[11px] font-bold uppercase`}>
-                  <th className="px-2.5 py-2 text-center w-12">#</th>
-                  <th className="px-2.5 py-2">{t('placa_patente')}</th>
-                  <th className="px-2.5 py-2">{t('compania')}</th>
-                  <th className="px-2.5 py-2">DEVIDNO</th>
-                  <th className="px-2.5 py-2">{t('codigo_qr')}</th>
-                  <th className="px-2.5 py-2">{t('marca')}</th>
-                  <th className="px-2.5 py-2">{t('modelo')}</th>
-                  <th className="px-2.5 py-2">{t('tipo_dev')}</th>
-                  <th className="px-2.5 py-2 whitespace-nowrap">{t('fecha_asignacion')}</th>
-                  <th className="px-2.5 py-2 whitespace-nowrap">{t('fecha_registro')}</th>
-                  <th className="px-2.5 py-2 whitespace-nowrap">{t('servicio_col')}</th>
-                  <th className="px-2.5 py-2">{t('estado_col')}</th>
-                  <th className="px-2.5 py-2 text-center whitespace-nowrap">{t('acciones_col') || 'Acciones'}</th>
+                  <th className="w-[48px] px-2 py-2 text-center">#</th>
+                  <th className="w-[130px] px-2.5 py-2">{t('placa_patente')}</th>
+                  <th className="w-[140px] px-2.5 py-2">{t('compania')}</th>
+                  <th className="w-[145px] px-2.5 py-2">DEVIDNO</th>
+                  <th className="w-[100px] px-2.5 py-2 text-center whitespace-nowrap">{t('codigo_qr')}</th>
+                  <th className="w-[100px] px-2.5 py-2">{t('marca')}</th>
+                  <th className="w-[100px] px-2.5 py-2">{t('modelo')}</th>
+                  <th className="w-[85px] px-2.5 py-2 text-center">{t('tipo_dev')}</th>
+                  <th className="w-[105px] px-2.5 py-2 text-center whitespace-nowrap">Datos</th>
+                  <th className="w-[130px] px-2.5 py-2 whitespace-nowrap">{t('servicio_col')}</th>
+                  <th className="w-[115px] px-2.5 py-2 whitespace-nowrap">{t('estado_col')}</th>
+                  <th className="w-[105px] px-2.5 py-2 text-center whitespace-nowrap">{t('acciones_col') || 'Acciones'}</th>
                 </tr>
               </thead>
               <tbody className={`divide-y ${divideClass} text-[#3a435d] dark:text-gray-200`}>
                 {devices.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={12} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400 italic">
                       {emptyMessage}
                     </td>
                   </tr>

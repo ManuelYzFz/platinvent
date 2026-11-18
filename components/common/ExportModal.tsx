@@ -113,11 +113,20 @@ export default function ExportModal<T>({
       const activeColumns = columns.filter((col) => selectedColumnIds.includes(col.id));
       const headers = activeColumns.map((col) => col.label);
 
-      // Generar filas procesadas
+      // Generar filas procesadas (reemplazando null, undefined o cadenas vacías por '-')
       const rows = data.map((item, idx) =>
         activeColumns.map((col) => {
           const val = col.getValue(item, idx);
-          return val === null || val === undefined ? '' : val;
+          if (
+            val === null ||
+            val === undefined ||
+            String(val).trim() === '' ||
+            String(val).trim().toLowerCase() === 'null' ||
+            String(val).trim().toLowerCase() === 'undefined'
+          ) {
+            return '-';
+          }
+          return val;
         })
       );
 

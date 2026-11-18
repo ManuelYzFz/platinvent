@@ -377,64 +377,93 @@ export function useDevicesInventory(session?: string) {
     setIsExportModalOpen(true);
   }, []);
 
-  // Importar dispositivos desde CSV o JSON
+  // Importar dispositivos desde CSV, JSON o Excel
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        if (!text) return;
-        if (file.name.endsWith('.json')) {
-          const parsed = JSON.parse(text);
-          const list: DeviceRecord[] = Array.isArray(parsed)
-            ? parsed
-            : (Array.isArray(parsed.infos)
-              ? parsed.infos
-              : (Array.isArray(parsed.devices) ? parsed.devices : []));
-          for (const item of list) {
-            await handleAddLocalDevice(item);
-          }
-        } else {
-          const lines = text.split(/\r?\n/).filter((line) => line.trim());
-          if (lines.length > 1) {
-            const separator = lines[0].includes(';') ? ';' : ',';
-            for (let i = 1; i < lines.length; i++) {
-              const cols = lines[i].split(separator).map((c) => c.replace(/^"|"$/g, '').trim());
-              if (cols[0]) {
-                const installCol = cols.length > 8 ? cols[8] : cols[7];
-                const isInstalled = installCol ? (installCol.toLowerCase().includes('no') || installCol.includes('0') ? 0 : 1) : 1;
-                const devTypeStr = cols[5]?.toUpperCase();
-                const devType = devTypeStr?.includes('MDVR') ? 7 : devTypeStr?.includes('GPS') ? 5 : undefined;
-                const patent = cols[6] && cols[6] !== 'Sin Asignar' ? cols[6] : undefined;
-                const company = cols[7] && cols[7] !== 'Sin Asignar' && cols.length > 8 ? cols[7] : undefined;
 
-                const newDev: DeviceRecord = {
-                  id: cols[0],
-                  devIDNO: cols[0],
-                  imei: cols[1] || undefined,
-                  serialID: cols[2] || undefined,
-                  brand: cols[3] || undefined,
-                  model: cols[4] || undefined,
-                  devType: devType ?? undefined,
-                  vehiIdno: patent,
-                  companyName: company,
-                  install: isInstalled,
-                };
-                await handleAddLocalDevice(newDev);
-              }
-            }
-          }
-        }
-        void fetchData(false);
-      } catch (err) {
-        console.error('Error al importar archivo de dispositivos:', err);
-      } finally {
-        e.target.value = '';
+    const processRows = async (rows: string[][]) => {
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].map((c) => String(c ?? '').trim());
+        if (!cols[0]) continue;
+        const installCol = cols.length > 8 ? cols[8] : cols[7];
+        const isInstalled = installCol
+          ? installCol.toLowerCase().includes('no') || installCol.includes('0') ? 0 : 1
+          : 1;
+        const devTypeStr = cols[5]?.toUpperCase();
+        const devType = devTypeStr?.includes('MDVR') ? 7 : devTypeStr?.includes('GPS') ? 5 : undefined;
+        const patent = cols[6] && cols[6] !== 'Sin Asignar' ? cols[6] : undefined;
+        const company = cols[7] && cols[7] !== 'Sin Asignar' && cols.length > 8 ? cols[7] : undefined;
+        const newDev: DeviceRecord = {
+          id: cols[0],
+          devIDNO: cols[0],
+          imei: cols[1] || undefined,
+          serialID: cols[2] || undefined,
+          brand: cols[3] || undefined,
+          model: cols[4] || undefined,
+          devType: devType ?? undefined,
+          vehiIdno: patent,
+          companyName: company,
+          install: isInstalled,
+        };
+        await handleAddLocalDevice(newDev);
       }
     };
-    reader.readAsText(file);
+
+    if (file.name.endsWith('.xlsx')) {
+      // Leer Excel como ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          if (!buffer) return;
+          const XLSX = await import('xlsx');
+          const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          await processRows(aoa.map((row) => row.map((cell) => String(cell ?? ''))));
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar Excel de dispositivos:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // JSON o CSV — leer como texto
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target?.result as string;
+          if (!text) return;
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(text);
+            const list: DeviceRecord[] = Array.isArray(parsed)
+              ? parsed
+              : (Array.isArray(parsed.infos)
+                ? parsed.infos
+                : (Array.isArray(parsed.devices) ? parsed.devices : []));
+            for (const item of list) {
+              await handleAddLocalDevice(item);
+            }
+          } else {
+            const lines = text.split(/\r?\n/).filter((line) => line.trim());
+            if (lines.length > 1) {
+              const separator = lines[0].includes(';') ? ';' : ',';
+              const rows = lines.map((l) => l.split(separator).map((c) => c.replace(/^"|"$/g, '').trim()));
+              await processRows(rows);
+            }
+          }
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar archivo de dispositivos:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
   }, [handleAddLocalDevice, fetchData]);
 
   // Filtrado de búsqueda

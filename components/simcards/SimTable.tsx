@@ -89,21 +89,23 @@ export function SimTable({
             <table className="min-w-175 w-full text-left text-xs text-[#3a435d] dark:text-gray-200">
               <thead className="bg-[#f8f9fc] dark:bg-[#0d1117] text-[11px] font-extrabold uppercase tracking-wider text-[#5c647b] dark:text-gray-400 border-b border-[#e8e9ed] dark:border-[#30363d]">
                 <tr>
-                  <th className="px-2.5 py-2 text-center w-12">#</th>
-                  <th className="px-2.5 py-2">{t('iccid_sim')}</th>
-                  <th className="px-2.5 py-2">{t('numero_telefono')}</th>
-                  <th className="px-2.5 py-2">{t('compania')}</th>
+                  <th className="px-2 py-2 text-center w-10">#</th>
+                  <th className="px-2 py-2">{t('iccid_sim')}</th>
+                  <th className="px-2 py-2">{t('numero_telefono')}</th>
+                  <th className="px-2 py-2">{t('compania')}</th>
                   {/* Solo en 4A (con dispositivo asignado): columna Dispositivo / Patente */}
-                  {isAssigned && <th className="px-2.5 py-2">{t('dispositivo_patente')}</th>}
-                  <th className="px-2.5 py-2">{t('estado_col')}</th>
-                  <th className="px-2.5 py-2">{t('fecha_registro')}</th>
-                  <th className="px-2.5 py-2 text-center whitespace-nowrap">{t('acciones_col') || 'Acciones'}</th>
+                  {isAssigned && <th className="px-2 py-2">{t('dispositivo_patente')}</th>}
+                  {/* Nueva columna: Datos (entre dispositivo/patente y estado) */}
+                  <th className="px-2 py-2 text-center whitespace-nowrap">Datos</th>
+                  <th className="px-2 py-2 text-center whitespace-nowrap">{t('estado_col')}</th>
+                  <th className="px-2 py-2 text-center whitespace-nowrap">{t('fecha_registro')}</th>
+                  <th className="px-2 py-2 text-center whitespace-nowrap">{t('acciones_col') || 'Acciones'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e8e9ed] dark:divide-[#30363d]">
                 {sims.length === 0 ? (
                   <tr>
-                    <td colSpan={isAssigned ? 8 : 7} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400 italic">
+                    <td colSpan={isAssigned ? 9 : 8} className="px-4 py-8 text-center text-xs text-gray-500 dark:text-gray-400 italic">
                       {emptyMessage}
                     </td>
                   </tr>

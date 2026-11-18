@@ -161,60 +161,88 @@ export function useSimCardsInventory(session?: string) {
     setIsExportModalOpen(true);
   }, []);
 
-  // Importar SIM Cards desde CSV o JSON
+  // Importar SIM Cards desde CSV, JSON o Excel
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        if (!text) return;
-        if (file.name.endsWith('.json')) {
-          const parsed = JSON.parse(text);
-          const list: SimRecord[] = Array.isArray(parsed)
-            ? parsed
-            : (Array.isArray(parsed.infos)
-              ? parsed.infos
-              : (Array.isArray(parsed.sims) ? parsed.sims : []));
-          for (const item of list) {
-            await saveSingleOfflineSim(item);
-            await enqueueSyncMutation('sim', 'create', { sim: item });
-          }
-        } else {
-          const lines = text.split(/\r?\n/).filter((line) => line.trim());
-          if (lines.length > 1) {
-            const separator = lines[0].includes(';') ? ';' : ',';
-            for (let i = 1; i < lines.length; i++) {
-              const cols = lines[i].split(separator).map((c) => c.replace(/^"|"$/g, '').trim());
-              if (cols[1]) {
-                const parsedId = Number(cols[0]);
-                const isInstalled =
-                  cols[7]?.includes('1') ||
-                  (cols[7]?.toLowerCase().includes('instalado') && !cols[7]?.toLowerCase().includes('no'));
-                const newSim: SimRecord = {
-                  id: !isNaN(parsedId) && parsedId > 0 ? parsedId : (Date.now() + i),
-                  simCard: normalizeICCID(cols[1]),
-                  phoneNum: cols[2] || undefined,
-                  companyName: cols[3] && cols[3] !== 'Sin Asignar' ? cols[3] : undefined,
-                  devId: cols[4] && cols[4] !== 'Sin Asignar' && cols[4] !== '-' ? cols[4] : undefined,
-                  serviceProvider: cols[6] || 'Entel',
-                  status: isInstalled ? 1 : 0,
-                };
-                await saveSingleOfflineSim(newSim);
-                await enqueueSyncMutation('sim', 'create', { sim: newSim });
-              }
-            }
-          }
-        }
-        void fetchData(false);
-      } catch (err) {
-        console.error('Error al importar archivo de SIM Cards:', err);
-      } finally {
-        e.target.value = '';
+
+    const processRows = async (rows: string[][]) => {
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].map((c) => String(c ?? '').trim());
+        if (!cols[1]) continue;
+        const parsedId = Number(cols[0]);
+        const isInstalled =
+          cols[7]?.includes('1') ||
+          (cols[7]?.toLowerCase().includes('instalado') && !cols[7]?.toLowerCase().includes('no'));
+        const newSim: SimRecord = {
+          id: !isNaN(parsedId) && parsedId > 0 ? parsedId : (Date.now() + i),
+          simCard: normalizeICCID(cols[1]),
+          phoneNum: cols[2] || undefined,
+          companyName: cols[3] && cols[3] !== 'Sin Asignar' ? cols[3] : undefined,
+          devId: cols[4] && cols[4] !== 'Sin Asignar' && cols[4] !== '-' ? cols[4] : undefined,
+          serviceProvider: cols[6] || 'Entel',
+          status: isInstalled ? 1 : 0,
+        };
+        await saveSingleOfflineSim(newSim);
+        await enqueueSyncMutation('sim', 'create', { sim: newSim });
       }
     };
-    reader.readAsText(file);
+
+    if (file.name.endsWith('.xlsx')) {
+      // Leer Excel como ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          if (!buffer) return;
+          const XLSX = await import('xlsx');
+          const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          await processRows(aoa.map((row) => row.map((cell) => String(cell ?? ''))));
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar Excel de SIM Cards:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // JSON o CSV — leer como texto
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target?.result as string;
+          if (!text) return;
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(text);
+            const list: SimRecord[] = Array.isArray(parsed)
+              ? parsed
+              : (Array.isArray(parsed.infos)
+                ? parsed.infos
+                : (Array.isArray(parsed.sims) ? parsed.sims : []));
+            for (const item of list) {
+              await saveSingleOfflineSim(item);
+              await enqueueSyncMutation('sim', 'create', { sim: item });
+            }
+          } else {
+            const lines = text.split(/\r?\n/).filter((line) => line.trim());
+            if (lines.length > 1) {
+              const separator = lines[0].includes(';') ? ';' : ',';
+              const rows = lines.map((l) => l.split(separator).map((c) => c.replace(/^"|"$/g, '').trim()));
+              await processRows(rows);
+            }
+          }
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar archivo de SIM Cards:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
   }, [fetchData]);
 
   const handleOpenEditSim = (sim: SimRecord) => {

@@ -88,8 +88,13 @@ export default function DevicesView({ session }: DevicesViewProps) {
   const deviceExportColumns: ExportColumn<DeviceRecord>[] = React.useMemo(
     () => [
       {
+        id: 'dbId',
+        label: 'ID',
+        getValue: (d) => (d.id !== undefined && d.id !== null ? Number(d.id) : '-'),
+      },
+      {
         id: 'devIDNO',
-        label: 'ID Dispositivo (devIDNO)',
+        label: 'devIDNO',
         getValue: (d) => String(d.devIDNO ?? d.id ?? ''),
       },
       {
@@ -173,6 +178,10 @@ export default function DevicesView({ session }: DevicesViewProps) {
     ],
     [getMatchedVehicle]
   );
+
+  const exportDevices = React.useMemo(() => {
+    return [...searchedDevices].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }, [searchedDevices]);
 
   return (
     <section className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 font-sans">
@@ -402,7 +411,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
           title="Inventario de Dispositivos"
           entityName="Dispositivos"
           filenamePrefix="dispositivos"
-          data={searchedDevices}
+          data={exportDevices}
           columns={deviceExportColumns}
         />
       )}

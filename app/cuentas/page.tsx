@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import AccountsView from '@/components/accounts/AccountsView';
 import { getSession, getUsername, getUserRole, clearSession } from '@/lib/utils/storage';
 
@@ -51,6 +52,7 @@ export default function CuentasPage() {
       <main className="w-full max-w-7xl mx-auto space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-10 py-6 sm:py-10 flex-1">
         {authorized && <AccountsView currentUsername={username} />}
       </main>
+      <Footer />
     </div>
   );
 }

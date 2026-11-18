@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import Preloader from '@/components/layout/Preloader';
 import { useTranslation } from '@/lib/i18n';
 import type { DeviceRecord } from '@/lib/types/inventory';
@@ -264,6 +265,7 @@ export default function InformesPage() {
         )}
 
       </main>
+      <Footer />
     </div>
   );
 }

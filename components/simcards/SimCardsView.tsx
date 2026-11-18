@@ -74,9 +74,9 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
   const simExportColumns: ExportColumn<SimRecord>[] = React.useMemo(
     () => [
       {
-        id: 'index',
-        label: '#',
-        getValue: (_s, idx) => idx + 1,
+        id: 'dbId',
+        label: 'ID',
+        getValue: (s) => (s.id !== undefined && s.id !== null ? Number(s.id) : '-'),
       },
       {
         id: 'simCard',
@@ -109,13 +109,43 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
       },
       {
         id: 'operator',
-        label: 'Operador / Proveedor',
+        label: 'Proveedor',
         getValue: (s) => String(s.serviceProvider ?? ''),
+      },
+      {
+        id: 'planName',
+        label: 'Tipo de Plan',
+        getValue: (s) => String(s.planName ?? ''),
+      },
+      {
+        id: 'city',
+        label: 'Ciudad de Emisión',
+        getValue: (s) => String(s.city ?? ''),
+      },
+      {
+        id: 'expirationDate',
+        label: 'Fecha de Expiración',
+        getValue: (s) => (s.endTime ? String(s.endTime).slice(0, 10) : ''),
+      },
+      {
+        id: 'cardMerchant',
+        label: 'Card Merchant',
+        getValue: (s) => String(s.cardMerchant ?? ''),
+      },
+      {
+        id: 'msisdn',
+        label: 'MSISDN',
+        getValue: (s) => String(s.msisdn ?? ''),
+      },
+      {
+        id: 'lineStatus',
+        label: 'Estado de Línea',
+        getValue: (s) => (Number(s.status) === 1 ? 'Habilitado' : 'No Habilitado'),
       },
       {
         id: 'installStatus',
         label: 'Estado de Instalación',
-        getValue: (s) => (Number(s.status) === 1 ? 'Instalado' : 'No Instalado'),
+        getValue: (s) => (Number(s.install) === 1 ? 'Instalado' : 'No Instalado'),
       },
       {
         id: 'registrationDate',
@@ -125,6 +155,11 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
     ],
     [devices, vehicles]
   );
+
+  const exportSims = React.useMemo(() => {
+    const list = filteredSims ?? sims ?? [];
+    return [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  }, [filteredSims, sims]);
 
   return (
     <section className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8 font-sans">
@@ -260,7 +295,7 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
           title="Inventario de Tarjetas SIM"
           entityName="SIM Cards"
           filenamePrefix="simcards"
-          data={filteredSims ?? sims ?? []}
+          data={exportSims}
           columns={simExportColumns}
         />
       )}
