@@ -23,8 +23,9 @@ export function applyTheme(theme: Theme) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
 
-  // Atributo Bootstrap 5 y clase Tailwind
+  // Atributo Bootstrap 5, ProyectoFactura y clase Tailwind
   root.setAttribute('data-bs-theme', theme);
+  root.setAttribute('data-theme', theme);
   if (theme === 'dark') {
     root.classList.add('dark');
   } else {

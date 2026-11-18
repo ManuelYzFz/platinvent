@@ -2,81 +2,96 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="w-full bg-[#0b1329] dark:bg-[#080d1c] border-t border-[#1e2a4a] text-slate-300 py-10 px-4 sm:px-6 lg:px-12 mt-auto">
+    <footer className="w-full bg-[#F1F5F9] dark:bg-[#080D17] border-t border-[#E2E8F0] dark:border-white/10 text-slate-600 dark:text-slate-400 py-10 px-4 sm:px-6 lg:px-12 mt-auto transition-colors">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
         
-        {/* Columna 1: Logo y Derechos */}
-        <div className="flex flex-col items-start gap-4">
-          <Image
-            src="/images/vtraxx.png"
-            alt="Logo Vtraxx"
-            width={160}
-            height={42}
-            className="h-9 w-auto object-contain"
-          />
-          <div className="text-[11px] leading-relaxed text-slate-400 font-medium tracking-wider">
-            <p className="flex items-center gap-1.5">
-              <span>●</span> DERECHOS RESERVADOS
-            </p>
-            <p className="pl-3 text-slate-400">EN VTRAXX CHILE</p>
+        {/* Columna 1: Logo Oficial y Derechos */}
+        <div className="flex flex-col items-start gap-3.5">
+          <div className="flex items-center">
+            <Image
+              src="/images/VtraxxOscuro.png"
+              alt="VTRAXX Chile"
+              width={160}
+              height={40}
+              className="h-8.5 w-auto object-contain dark:hidden"
+            />
+            <Image
+              src="/images/VtraxxBlanco.png"
+              alt="VTRAXX Chile"
+              width={160}
+              height={40}
+              className="h-8.5 w-auto object-contain hidden dark:block"
+            />
           </div>
-        </div>
-
-        {/* Columna 2: Sobre Nosotros */}
-        <div className="flex flex-col gap-3">
-          <h4 className="text-sm font-bold text-white tracking-wide">
-            Sobre Nosotros
-          </h4>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            VTRAXX CHILE ofrece una solución integral con tecnología de punta en equipos de POSICIONAMIENTO, MONITOREO, VIDEO VIGILANCIA MÓVIL, TELEMETRÍA
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+            © {currentYear} VTRAXX Chile. Todos los derechos reservados.
           </p>
           <a
             href="/docs/politica-de-etica-y-cumplimiento.pdf"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-slate-300 hover:text-[#00acee] underline decoration-slate-500 hover:decoration-[#00acee] transition-colors w-fit font-medium"
+            className="inline-flex items-center gap-1.5 text-xs text-[#00A3E0] hover:underline font-semibold"
           >
-            Política de Ética y Cumplimiento
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span>Política de Ética y Cumplimiento</span>
           </a>
         </div>
 
-        {/* Columna 3: Horario */}
-        <div className="flex flex-col gap-3">
-          <h4 className="text-sm font-bold text-white tracking-wide">
-            Horario
+        {/* Columna 2: Sobre Nosotros */}
+        <div className="flex flex-col gap-2.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white">
+            Sobre Nosotros
           </h4>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            En nuestra oficina podemos dar solución a tus problemas
-          </p>
-          <p className="text-xs font-semibold text-white">
-            Lun-Vie: 9 am a 5 pm
+          <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            VTRAXX Chile ofrece soluciones integrales en equipos de posicionamiento satelital, telemetría avanzada, monitoreo continuo y video vigilancia móvil adaptadas al mercado nacional.
           </p>
         </div>
 
+        {/* Columna 3: Dirección */}
+        <div className="flex flex-col gap-2.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white">
+            Dirección
+          </h4>
+          <div className="flex items-start gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+            <MapPin className="w-4 h-4 text-[#00A3E0] shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <p>Pasaje 1, Villa Sallustro</p>
+              <p>Rancagua, Región de O&apos;Higgins</p>
+              <p className="text-[#00A3E0] font-semibold">Chile</p>
+            </div>
+          </div>
+        </div>
+
         {/* Columna 4: Contacto */}
-        <div className="flex flex-col gap-3">
-          <h4 className="text-sm font-bold text-white tracking-wide">
+        <div className="flex flex-col gap-2.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white">
             Contacto
           </h4>
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2 text-xs">
             <a
               href="mailto:ventas@vtraxx.cl"
-              className="flex items-center gap-2.5 text-xs text-slate-300 hover:text-[#00acee] transition-colors group"
+              className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-[#00A3E0] transition-colors group"
             >
-              <Mail className="w-4 h-4 text-[#00acee] shrink-0 group-hover:scale-110 transition-transform" />
+              <Mail className="w-4 h-4 text-[#00A3E0] shrink-0 group-hover:scale-110 transition-transform" />
               <span>ventas@vtraxx.cl</span>
             </a>
             <a
               href="tel:+56981572635"
-              className="flex items-center gap-2.5 text-xs text-slate-300 hover:text-[#00acee] transition-colors group"
+              className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300 hover:text-[#00A3E0] transition-colors group"
             >
-              <Phone className="w-4 h-4 text-[#00acee] shrink-0 group-hover:scale-110 transition-transform" />
+              <Phone className="w-4 h-4 text-[#00A3E0] shrink-0 group-hover:scale-110 transition-transform" />
               <span>+56 9 8157 2635</span>
             </a>
+            <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400">
+              <Clock className="w-4 h-4 text-[#00A3E0] shrink-0" />
+              <span>Lun - Vie: 9:00 a 17:00 hrs</span>
+            </div>
           </div>
         </div>
 
