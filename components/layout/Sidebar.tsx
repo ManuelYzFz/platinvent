@@ -10,7 +10,6 @@ import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n';
 import { triggerInstallPrompt } from '@/components/pwa/PwaManager';
 import { useUserRole } from '@/lib/utils/useUserRole';
-import SyncIndicator from './SyncIndicator';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -229,16 +228,6 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
             </button>
           )}
 
-        </div>
-
-        {/* Footer del Menú: Indicador de Sincronización + Versión */}
-        <div className="sidebar-footer p-4 sm:p-5 border-t border-[#E2E8F0] dark:border-white/10 bg-[#F8FAFC] dark:bg-[#121927] shrink-0 space-y-3">
-          <div className="w-full flex items-center">
-            <SyncIndicator />
-          </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-            {t('version')}
-          </div>
         </div>
       </aside>
     </div>

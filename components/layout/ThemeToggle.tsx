@@ -7,15 +7,15 @@ import { useTranslation } from '@/lib/i18n';
 export type Theme = 'light' | 'dark';
 
 export function getPreferredTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined') return 'dark';
   try {
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme === 'dark' || storedTheme === 'light') {
       return storedTheme;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'dark';
   } catch {
-    return 'light';
+    return 'dark';
   }
 }
 

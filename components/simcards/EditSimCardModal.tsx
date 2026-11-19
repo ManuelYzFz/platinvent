@@ -462,6 +462,68 @@ export default function EditSimCardModal({
     }
   };
 
+  // Capturar fotograma desde el stream activo de la cámara
+  const capturePhotoFromVideo = async () => {
+    const readerElement = document.getElementById('edit-simcard-reader');
+    const video = readerElement?.querySelector('video');
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setCameraError('Esperando que la cámara enfoque... Intenta de nuevo.');
+      return;
+    }
+
+    setIsAnalyzingFile(true);
+    setCameraError(null);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.95));
+        if (blob) {
+          const file = new File([blob], 'snapshot.jpg', { type: 'image/jpeg' });
+          const rawText = await decodeBarcodeFromImage(file, 'edit-simcard-file-helper');
+          const clean = rawText.trim();
+          const normalized = normalizeICCID(clean);
+          setSimCardCode(normalized);
+          setScanSuccess(true);
+          setIsScanning(false);
+          void stopCamera();
+        }
+      }
+    } catch (err) {
+      console.warn('Error al capturar foto desde la cámara:', err);
+      setCameraError('No se detectó un código nítido en el momento del disparo. Acerca más la cámara a la SIM Card con buena iluminación.');
+    } finally {
+      setIsAnalyzingFile(false);
+    }
+  };
+
+  // Manejar clic en "Tomar foto": si hay cámara activa captura, si no la activa
+  const handleTakePhotoClick = async () => {
+    setCameraError(null);
+
+    // Si la cámara ya está activa, capturar fotograma
+    if (isScanning) {
+      await capturePhotoFromVideo();
+      return;
+    }
+
+    // Si el navegador soporta getUserMedia, abrir la cámara directamente
+    if (typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function') {
+      try {
+        await startCamera();
+        return;
+      } catch (err) {
+        console.warn('No se pudo iniciar transmisión web de cámara, recurriendo a input nativo:', err);
+      }
+    }
+
+    // Fallback: abrir cámara nativa del dispositivo
+    cameraInputRef.current?.click();
+  };
+
   const detectedOperator = useMemo(() => {
     if (!simCardCode.trim()) return null;
     return detectOperatorFromICCID(simCardCode.trim());
@@ -640,28 +702,6 @@ export default function EditSimCardModal({
                   Escáner de Cámara
                 </span>
               </div>
-              {!isScanning ? (
-                <button
-                  type="button"
-                  onClick={() => void startCamera()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>{t('activar_camara')}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsScanning(false);
-                    void stopCamera();
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                  <span>{t('detener_camara')}</span>
-                </button>
-              )}
             </div>
 
             {/* Inputs ocultos para captura nativa o galería */}
@@ -685,6 +725,34 @@ export default function EditSimCardModal({
             {isScanning && (
               <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 bg-black min-h-65 md:min-h-75 flex items-center justify-center">
                 <div id="edit-simcard-reader" className="w-full h-full min-h-65 md:min-h-75" />
+                <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/80 backdrop-blur-xs border border-white/10 text-white text-xs">
+                  <span className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Cámara activa
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={capturePhotoFromVideo}
+                      disabled={isAnalyzingFile}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Capturar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsScanning(false);
+                        void stopCamera();
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Cerrar</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -695,26 +763,26 @@ export default function EditSimCardModal({
               </div>
             )}
 
-            {/* Botones adicionales: tomar foto o subir archivo */}
+            {/* Botones adicionales: activar cámara o buscar imagen */}
             <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={isAnalyzingFile}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                onClick={() => void startCamera()}
+                disabled={isScanning || isAnalyzingFile}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Camera className="w-4 h-4 text-indigo-200" />
-                <span>{t('tomar_foto_camara')}</span>
+                <span>Activar cámara</span>
               </button>
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
                 disabled={isAnalyzingFile}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 dark:bg-[#121927] hover:bg-slate-200 dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
-                title="Abrir galería de fotos"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
+                title="Buscar imagen en el equipo"
               >
                 <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
-                <span>{t('buscar_imagen_galeria')}</span>
+                <span>Buscar imagen</span>
               </button>
             </div>
 

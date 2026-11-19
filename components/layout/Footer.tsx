@@ -12,7 +12,7 @@ export default function Footer() {
         {/* Columna 1: Logo y Derechos */}
         <div className="flex flex-col items-start gap-4">
           <Image
-            src="/images/vtraxx.png"
+            src="/images/VtraxxBlanco.png"
             alt="Logo Vtraxx"
             width={160}
             height={42}

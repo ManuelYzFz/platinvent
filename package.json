@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev --webpack -H 0.0.0.0",
     "dev:https": "next dev --experimental-https -H 0.0.0.0",
     "tunnel": "localtunnel --port 3000",
     "build": "next build",
@@ -21,6 +21,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tesseract.js": "^7.0.0",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },

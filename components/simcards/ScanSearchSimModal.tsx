@@ -12,11 +12,12 @@ import {
   Copy,
   Check,
   Plus,
-  RotateCcw
+  RotateCcw,
+  ImageIcon
 } from 'lucide-react';
 import { normalizeICCID, detectOperatorFromICCID } from '@/lib/utils/sim-utils';
 import { useTranslation } from '@/lib/i18n';
-import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
+import { decodeBarcodeFromImage, decodeAllBarcodesFromImage } from '@/lib/utils/barcode-decoder';
 import { useScrollLock } from '@/lib/utils/useScrollLock';
 import type { SimRecord } from '@/lib/types/inventory';
 
@@ -42,6 +43,7 @@ export default function ScanSearchSimModal({
   const [scanSuccessCode, setScanSuccessCode] = useState<string | null>(null);
   const [isAnalyzingFile, setIsAnalyzingFile] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: number } | null>(null);
 
   const html5QrcodeRef = useRef<import('html5-qrcode').Html5Qrcode | null>(null);
   const cancelCameraStartRef = useRef<boolean>(false);
@@ -77,6 +79,7 @@ export default function ScanSearchSimModal({
     setIsScanning(false);
     setIsAnalyzingFile(false);
     setCopied(false);
+    setUploadedFile(null);
     hasProcessedRef.current = false;
   };
 
@@ -305,24 +308,120 @@ export default function ScanSearchSimModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setUploadedFile({ name: file.name, size: file.size });
     setIsAnalyzingFile(true);
     setCameraError(null);
 
     try {
-      const rawText = await decodeBarcodeFromImage(file, 'search-sim-file-helper');
-      const clean = rawText.trim();
-      const normalized = normalizeICCID(clean);
+      const rawCodes = await decodeAllBarcodesFromImage(file, 'search-sim-file-helper');
+      if (!rawCodes || rawCodes.length === 0) {
+        throw new Error('No se detectó un código legible.');
+      }
+
+      // Si hay varios códigos, priorizar uno que empiece con 89 (formato ICCID estándar) o coincida con una SIM de la BD
+      let bestCode = rawCodes[0];
+      for (const c of rawCodes) {
+        const norm = normalizeICCID(c.trim());
+        if (norm.startsWith('89')) {
+          bestCode = norm;
+          break;
+        }
+        if (sims && sims.some((s) => s.simCard === norm || s.cardNum === norm)) {
+          bestCode = norm;
+          break;
+        }
+      }
+
+      const normalized = normalizeICCID(bestCode.trim());
       setScanSuccessCode(normalized);
       setIsScanning(false);
       void stopCamera();
     } catch (err) {
       console.warn('Error decodificando imagen SIM:', err);
-      setCameraError('No se detecto un codigo legible en la foto. Intenta tomar la foto mas de cerca con buena iluminacion o escribe el ICCID abajo.');
+      setCameraError('No se detectó un código legible en la foto. Intenta tomar la foto más de cerca con buena iluminación o escribe el ICCID abajo.');
+      setUploadedFile(null);
     } finally {
       setIsAnalyzingFile(false);
       if (cameraInputRef.current) cameraInputRef.current.value = '';
       if (galleryInputRef.current) galleryInputRef.current.value = '';
     }
+  };
+
+  // Capturar fotograma desde el stream activo de la cámara
+  const capturePhotoFromVideo = async () => {
+    const readerElement = document.getElementById('search-sim-reader');
+    const video = readerElement?.querySelector('video');
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setCameraError('Esperando que la cámara enfoque... Intenta de nuevo.');
+      return;
+    }
+
+    setIsAnalyzingFile(true);
+    setCameraError(null);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.95));
+        if (blob) {
+          const file = new File([blob], 'snapshot.jpg', { type: 'image/jpeg' });
+          const rawCodes = await decodeAllBarcodesFromImage(file, 'search-sim-file-helper');
+          if (!rawCodes || rawCodes.length === 0) {
+            throw new Error('No se detectó un código legible.');
+          }
+
+          let bestCode = rawCodes[0];
+          for (const c of rawCodes) {
+            const norm = normalizeICCID(c.trim());
+            if (norm.startsWith('89')) {
+              bestCode = norm;
+              break;
+            }
+            if (sims && sims.some((s) => s.simCard === norm || s.cardNum === norm)) {
+              bestCode = norm;
+              break;
+            }
+          }
+
+          const normalized = normalizeICCID(bestCode.trim());
+          setScanSuccessCode(normalized);
+          setIsScanning(false);
+          void stopCamera();
+        }
+      }
+    } catch (err) {
+      console.warn('Error al capturar foto desde la cámara:', err);
+      setCameraError('No se detectó un código nítido en el momento del disparo. Acerca más la cámara a la SIM Card con buena iluminación.');
+    } finally {
+      setIsAnalyzingFile(false);
+    }
+  };
+
+  // Manejar clic en "Tomar foto": si hay cámara activa captura, si no la activa
+  const handleTakePhotoClick = async () => {
+    setCameraError(null);
+
+    // Si la cámara ya está activa, capturar fotograma
+    if (isScanning) {
+      await capturePhotoFromVideo();
+      return;
+    }
+
+    // Si el navegador soporta getUserMedia, abrir la cámara directamente
+    if (typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function') {
+      try {
+        await startCamera();
+        return;
+      } catch (err) {
+        console.warn('No se pudo iniciar transmisión web de cámara, recurriendo a input nativo:', err);
+      }
+    }
+
+    // Fallback: abrir cámara nativa del dispositivo
+    cameraInputRef.current?.click();
   };
 
   useScrollLock(isOpen);
@@ -391,10 +490,10 @@ export default function ScanSearchSimModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                {scanSuccessCode ? 'Resultado del Escaneo SIM' : t('modal_escanear_titulo')}
+                {scanSuccessCode ? 'Resultado del Escaneo SIM' : 'Escanear / Buscar SIM Card'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {scanSuccessCode ? 'Informacion previa detectada de la tarjeta SIM' : t('modal_escanear_subtitulo')}
+                {scanSuccessCode ? 'Informacion previa detectada de la tarjeta SIM' : 'Escanea el código de barras o QR del ICCID de la SIM Card'}
               </p>
             </div>
           </div>
@@ -575,14 +674,17 @@ export default function ScanSearchSimModal({
                   <div className="flex gap-2 mt-2">
                     <button
                       type="button"
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={handleTakePhotoClick}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                     >
                       <Camera className="w-4 h-4" />
-                      <span>{t('tomar_foto_camara')}</span>
+                      <span>Tomar foto</span>
                     </button>
                     <button
-                      onClick={startCamera}
+                      onClick={() => {
+                        resetState();
+                        void startCamera();
+                      }}
                       type="button"
                       className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-gray-200 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
                     >
@@ -615,11 +717,7 @@ export default function ScanSearchSimModal({
 
               {isScanning && (
                 <>
-                  <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/75 px-3 py-1.5 rounded-full text-white text-xs font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>{t('modal_apunta_codigo')}</span>
-                  </div>
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10 pb-8">
                     <div className="w-[84%] max-w-105 h-[68%] max-h-55 border-2 border-dashed border-[#00A3E0]/80 rounded-2xl shadow-[0_0_15px_rgba(0,163,224,0.3)] relative">
                       <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-4 border-l-4 border-[#00A3E0] rounded-tl" />
                       <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-4 border-r-4 border-[#00A3E0] rounded-tr" />
@@ -627,38 +725,89 @@ export default function ScanSearchSimModal({
                       <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-4 border-r-4 border-[#00A3E0] rounded-br" />
                     </div>
                   </div>
+
+                  {/* Barra inferior de disparo y control de cámara */}
+                  <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/90 backdrop-blur-xs border border-white/10 text-white text-xs font-semibold">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                      <span className="text-[11px] text-slate-300 font-medium truncate">
+                        {t('modal_apunta_codigo') || 'Apunta al código de barras o QR'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={capturePhotoFromVideo}
+                        disabled={isAnalyzingFile}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Capturar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsScanning(false);
+                          void stopCamera();
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Cerrar</span>
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
 
-            {/* Botones: Tomar foto o abrir galería */}
-            <div className="flex flex-col sm:flex-row gap-2.5">
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={isAnalyzingFile}
-                className="flex-1 flex items-center justify-center gap-2.5 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-extrabold transition-all shadow-md cursor-pointer disabled:opacity-50"
-              >
-                <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-200" />
-                <span>{t('tomar_foto_camara')}</span>
-              </button>
+            {/* Cuadro de archivo subido o botón de buscar imagen */}
+            {uploadedFile ? (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-100 dark:bg-[#121927] border border-slate-200 dark:border-white/10 animate-in fade-in">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-lg bg-indigo-500/15 text-indigo-500 shrink-0">
+                    <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {uploadedFile.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {(uploadedFile.size / 1024).toFixed(1)} KB {isAnalyzingFile ? '• Analizando...' : '• Archivo cargado'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    disabled={isAnalyzingFile}
+                    className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    Cambiar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUploadedFile(null)}
+                    disabled={isAnalyzingFile}
+                    className="p-1.5 rounded-lg hover:bg-rose-500/15 text-slate-400 hover:text-rose-500 transition-all cursor-pointer disabled:opacity-50"
+                    title="Quitar archivo"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ) : (
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
                 disabled={isAnalyzingFile}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-3 px-4 bg-slate-100 dark:bg-[#121927] hover:bg-slate-200 dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-300 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
-                title="Abrir galeria de fotos"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
+                title="Buscar imagen en el equipo"
               >
                 <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
-                <span>{t('buscar_imagen_galeria')}</span>
+                <span>Buscar imagen</span>
               </button>
-            </div>
-
-            {cameraError && (
-              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>{cameraError}</span>
-              </div>
             )}
 
             {/* Búsqueda manual */}

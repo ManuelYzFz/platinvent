@@ -255,11 +255,6 @@ export default function DevicesView({ session }: DevicesViewProps) {
               <Truck className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
-                  {expandedRows.installedDevices ? t('mostrando_tabla') : t('clic_desplegar')}
-                </span>
-              </div>
               <h3 className="text-lg sm:text-xl font-black text-[#0F172A] dark:text-white">{t('vendidos_instalados')}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('dispositivos_activos_vehiculos')}</p>
             </div>
@@ -284,11 +279,6 @@ export default function DevicesView({ session }: DevicesViewProps) {
               <Package className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[11px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/25">
-                  {expandedRows.uninstalledDevices ? t('mostrando_tabla') : t('clic_desplegar')}
-                </span>
-              </div>
               <h3 className="text-lg sm:text-xl font-black text-[#0F172A] dark:text-white">{t('disponibles_bodega')}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">{t('dispositivos_no_vinculados')}</p>
             </div>

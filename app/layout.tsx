@@ -42,7 +42,8 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-bs-theme="dark"
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script
@@ -52,7 +53,7 @@ export default function RootLayout({
                 var stored = localStorage.getItem('theme');
                 var theme = (stored === 'dark' || stored === 'light')
                   ? stored
-                  : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  : 'dark';
                 document.documentElement.setAttribute('data-bs-theme', theme);
                 document.documentElement.style.colorScheme = theme;
                 if (theme === 'dark') {
