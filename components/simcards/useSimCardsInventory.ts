@@ -35,10 +35,15 @@ export function useSimCardsInventory(session?: string) {
   const searchQuery = useDebounce(rawSearchQuery, 250);
   const [scanFilter, setScanFilter] = useState<string>('');
 
+  // Auto-refresco en segundo plano
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s por defecto
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   const [isSimCardModalOpen, setIsSimCardModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedEditSim, setSelectedEditSim] = useState<SimRecord | null>(null);
   const [isScanSearchModalOpen, setIsScanSearchModalOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   const [expandedRows, setExpandedRows] = useState({
     simsWithDevices: true,
@@ -115,6 +120,7 @@ export function useSimCardsInventory(session?: string) {
         setDevices(devList);
         await saveOfflineDevices(devList);
       }
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching SIM Cards data:', err);
       setSims((currentSims) => {
@@ -154,8 +160,6 @@ export function useSimCardsInventory(session?: string) {
     await fetchData(false);
     setError(data?.error || 'Datos inválidos: no se pudo guardar.');
   }, [fetchData]);
-
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
@@ -330,6 +334,47 @@ export function useSimCardsInventory(session?: string) {
     };
   }, [fetchData]);
 
+  // Auto-refresco en segundo plano con pausa inteligente
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+
+    // Pausar si algún modal está abierto
+    const isAnyModalOpen =
+      isSimCardModalOpen ||
+      isEditModalOpen ||
+      isScanSearchModalOpen ||
+      isExportModalOpen;
+
+    if (isAnyModalOpen) return;
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      void fetchData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    autoRefreshInterval,
+    isSimCardModalOpen,
+    isEditModalOpen,
+    isScanSearchModalOpen,
+    isExportModalOpen,
+    fetchData,
+  ]);
+
+  // Sincronizar inmediatamente al volver a enfocar la pestaña
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && autoRefreshInterval > 0) {
+        void fetchData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autoRefreshInterval, fetchData]);
+
   // Filtrado de búsqueda
   const filteredSims = useMemo(() => {
     let result = sims;
@@ -346,25 +391,39 @@ export function useSimCardsInventory(session?: string) {
     }
 
     if (searchQuery.trim()) {
-      const qRaw = searchQuery.toLowerCase().trim();
-      const qNorm = normalizeICCID(qRaw).toLowerCase();
+      const terms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
 
       result = result.filter((s) => {
         const simCardRaw = String(s.simCard ?? '').toLowerCase();
         const simCardNorm = normalizeICCID(simCardRaw).toLowerCase();
+        const simCardNoDash = simCardRaw.replace(/[^0-9a-z]/gi, '');
         const cardNum = String(s.cardNum ?? '').toLowerCase();
         const devId = String(s.devIDNO ?? '').toLowerCase();
         const company = String(s.companyName ?? s.company?.name ?? '').toLowerCase();
         const patent = String(s.vehiIDNO ?? '').toLowerCase();
+        const patentNoDash = patent.replace(/[^0-9a-z]/gi, '');
+        const provider = String(s.serviceProvider ?? '').toLowerCase();
+        const phone = String(s.msisdn ?? s.phoneNum ?? '').toLowerCase();
+        const plan = String(s.planName ?? '').toLowerCase();
 
-        return (
-          simCardRaw.includes(qRaw) ||
-          simCardNorm.includes(qNorm) ||
-          cardNum.includes(qRaw) ||
-          devId.includes(qRaw) ||
-          company.includes(qRaw) ||
-          patent.includes(qRaw)
-        );
+        return terms.every((term) => {
+          const termNoDash = term.replace(/[^0-9a-z]/gi, '');
+          const termNorm = normalizeICCID(term).toLowerCase();
+
+          return (
+            simCardRaw.includes(term) ||
+            simCardNorm.includes(termNorm) ||
+            (termNoDash && simCardNoDash.includes(termNoDash)) ||
+            cardNum.includes(term) ||
+            devId.includes(term) ||
+            company.includes(term) ||
+            patent.includes(term) ||
+            (termNoDash && patentNoDash.includes(termNoDash)) ||
+            provider.includes(term) ||
+            phone.includes(term) ||
+            plan.includes(term)
+          );
+        });
       });
     }
 
@@ -461,6 +520,9 @@ export function useSimCardsInventory(session?: string) {
     isScanSearchModalOpen,
     setIsScanSearchModalOpen,
     fetchData,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   };
 }
 

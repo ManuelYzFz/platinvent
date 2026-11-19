@@ -64,9 +64,13 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
     setIsScanSearchModalOpen,
     fetchData,
     filteredSims,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   } = useSimCardsInventory(session);
 
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false);
+  const [createInitialIccid, setCreateInitialIccid] = React.useState<string>('');
 
   const userRole = getUserRole();
   const isReadOnly = userRole === 'solo_lectura';
@@ -175,6 +179,9 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
         loading={loading}
         isReadOnly={isReadOnly}
         t={t}
+        autoRefreshInterval={autoRefreshInterval}
+        onChangeAutoRefreshInterval={setAutoRefreshInterval}
+        lastUpdated={lastUpdated}
       />
 
       {/* Badge de Escaneo Activo con botón de eliminación fácil */}
@@ -252,10 +259,14 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
       {!isReadOnly && isSimCardModalOpen && (
         <CreateSimCardModal
           isOpen={isSimCardModalOpen}
-          onClose={() => setIsSimCardModalOpen(false)}
+          onClose={() => {
+            setIsSimCardModalOpen(false);
+            setCreateInitialIccid('');
+          }}
           companiesList={companiesList}
           devicesList={devices}
           vehiclesList={vehicles}
+          initialIccid={createInitialIccid}
           onSuccess={(newSim?: SimRecord) => {
             if (newSim) {
               setSims((prev) => [newSim, ...prev.filter((s) => s.id !== newSim.id)]);
@@ -284,6 +295,11 @@ export default function SimCardsView({ session }: SimCardsViewProps) {
           onScanResult={(scannedCode) => {
             handleScanFilterChange(scannedCode.trim());
           }}
+          sims={sims}
+          onOpenCreate={!isReadOnly ? (initialCode) => {
+            setCreateInitialIccid(initialCode || '');
+            setIsSimCardModalOpen(true);
+          } : undefined}
         />
       )}
 

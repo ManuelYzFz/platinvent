@@ -37,6 +37,10 @@ export function useDevicesInventory(session?: string) {
   const searchQuery = useDebounce(rawSearchQuery, 250);
   const [scanFilter, setScanFilter] = useState<string>('');
 
+  // Auto-refresco en segundo plano
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s por defecto
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   // Modales
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
@@ -46,6 +50,7 @@ export function useDevicesInventory(session?: string) {
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedDeleteDevice, setSelectedDeleteDevice] = useState<DeviceRecord | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Expansión de secciones
   const [expandedRows, setExpandedRows] = useState({
@@ -167,6 +172,7 @@ export function useDevicesInventory(session?: string) {
         setCompanies(compList);
         await saveOfflineCompanies(compList);
       }
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching local devices:', err);
       setDevices((currentDevs) => {
@@ -215,6 +221,51 @@ export function useDevicesInventory(session?: string) {
       }
     };
   }, [fetchData]);
+
+  // Auto-refresco en segundo plano con pausa inteligente
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+
+    // Pausar si algún modal está abierto
+    const isAnyModalOpen =
+      isCreateModalOpen ||
+      isEditModalOpen ||
+      isScanModalOpen ||
+      isDeleteModalOpen ||
+      isQrModalOpen ||
+      isExportModalOpen;
+
+    if (isAnyModalOpen) return;
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      void fetchData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    autoRefreshInterval,
+    isCreateModalOpen,
+    isEditModalOpen,
+    isScanModalOpen,
+    isDeleteModalOpen,
+    isQrModalOpen,
+    isExportModalOpen,
+    fetchData,
+  ]);
+
+  // Sincronizar inmediatamente al volver a enfocar la pestaña
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && autoRefreshInterval > 0) {
+        void fetchData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autoRefreshInterval, fetchData]);
 
   // El servidor rechazó los datos (400): no se reintenta offline; se recarga y se muestra el motivo
   const handleRejectedSave = useCallback(async (res: Response) => {
@@ -383,8 +434,6 @@ export function useDevicesInventory(session?: string) {
     return undefined;
   }, [vehicleByDeviceId, vehicleByPatent]);
 
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-
   // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
     setIsExportModalOpen(true);
@@ -494,26 +543,39 @@ export function useDevicesInventory(session?: string) {
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+      const terms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
       result = result.filter((d) => {
         const matchedVeh = getMatchedVehicle(d);
         const cleanPat = (getCleanPatent(d, matchedVeh) || '').toLowerCase();
+        const cleanPatNoDash = cleanPat.replace(/[^a-z0-9]/gi, '');
         const cleanComp = (getCleanCompany(d, matchedVeh) || '').toLowerCase();
         const devId = String(d.devIDNO ?? d.id ?? '').toLowerCase();
         const brand = String(d.brand ?? '').toLowerCase();
         const model = String(d.model ?? '').toLowerCase();
         const imei = String(d.imei ?? '').toLowerCase();
+        const imeiNoDash = imei.replace(/[^0-9]/g, '');
         const serial = String(d.serialID ?? '').toLowerCase();
+        const simCard = String(d.actualCardNumber ?? d.simInfo ?? d.sim ?? d.cardNum ?? '').toLowerCase();
+        const phone = String(d.phoneNum ?? d.msisdn ?? '').toLowerCase();
+        const devType = String(d.devType ?? d.type ?? '').toLowerCase();
 
-        return (
-          cleanPat.includes(q) ||
-          cleanComp.includes(q) ||
-          devId.includes(q) ||
-          brand.includes(q) ||
-          model.includes(q) ||
-          imei.includes(q) ||
-          serial.includes(q)
-        );
+        return terms.every((term) => {
+          const termNoDash = term.replace(/[^a-z0-9]/gi, '');
+          return (
+            cleanPat.includes(term) ||
+            (termNoDash && cleanPatNoDash.includes(termNoDash)) ||
+            cleanComp.includes(term) ||
+            devId.includes(term) ||
+            brand.includes(term) ||
+            model.includes(term) ||
+            imei.includes(term) ||
+            (termNoDash && imeiNoDash.includes(termNoDash)) ||
+            serial.includes(term) ||
+            simCard.includes(term) ||
+            phone.includes(term) ||
+            devType.includes(term)
+          );
+        });
       });
     }
 
@@ -613,6 +675,9 @@ export function useDevicesInventory(session?: string) {
     handleCloseDeleteModal,
     handleDeleteLocalDevice,
     fetchData,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   };
 }
 

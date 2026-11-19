@@ -137,17 +137,23 @@ export default function InformesPage() {
       .sort(byMostInstalled);
   }, [devices]);
 
-  // Filtrado por buscador
+  // Filtrado por buscador inteligente (multi-término)
   const filteredBrandGroups = useMemo<BrandGroup[]>(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return allBrandGroups;
+    const terms = searchTerm.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return allBrandGroups;
 
     return allBrandGroups
       .map((brand) => {
-        const brandMatch = brand.label.toLowerCase().includes(query);
-        const matchingModels = brand.models.filter((m) => m.label.toLowerCase().includes(query));
+        const brandLabel = brand.label.toLowerCase();
+        const brandMatchesAll = terms.every((t) => brandLabel.includes(t));
 
-        if (brandMatch) {
+        const matchingModels = brand.models.filter((m) => {
+          const modelLabel = m.label.toLowerCase();
+          const combined = `${brandLabel} ${modelLabel}`;
+          return terms.every((t) => combined.includes(t));
+        });
+
+        if (brandMatchesAll) {
           return brand;
         }
 

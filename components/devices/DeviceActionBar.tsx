@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { Plus, Scan, Download, Upload, Search, XCircle, RefreshCw, Tag } from 'lucide-react';
+import AutoRefreshControl from '@/components/common/AutoRefreshControl';
 
 export interface DeviceActionBarProps {
   onOpenCreateModal: () => void;
@@ -15,6 +16,9 @@ export interface DeviceActionBarProps {
   loading: boolean;
   isReadOnly?: boolean;
   t: (key: string) => string;
+  autoRefreshInterval?: number;
+  onChangeAutoRefreshInterval?: (interval: number) => void;
+  lastUpdated?: Date | null;
 }
 
 export function DeviceActionBar({
@@ -29,6 +33,9 @@ export function DeviceActionBar({
   loading,
   isReadOnly = false,
   t,
+  autoRefreshInterval = 30,
+  onChangeAutoRefreshInterval,
+  lastUpdated,
 }: DeviceActionBarProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -126,16 +133,20 @@ export function DeviceActionBar({
           )}
         </div>
 
-        <button
-          onClick={onRefreshAll}
-          disabled={loading}
-          type="button"
-          className="flex items-center justify-center p-2.5 sm:p-3 text-slate-700 dark:text-slate-200 hover:text-[#00A3E0] dark:hover:text-[#00A3E0] bg-[#F8FAFC] dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-white/15 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs active:scale-95"
-          title="Restablecer búsquedas y actualizar inventario"
-          aria-label="Restablecer búsquedas y actualizar inventario"
-        >
-          <RefreshCw className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${loading ? 'animate-spin text-[#00A3E0]' : 'text-[#00A3E0]'}`} />
-        </button>
+        <div className="flex items-center gap-2 shrink-0 justify-end">
+          <AutoRefreshControl lastUpdated={lastUpdated} />
+
+          <button
+            onClick={onRefreshAll}
+            disabled={loading}
+            type="button"
+            className="flex items-center justify-center p-2.5 sm:p-3 text-slate-700 dark:text-slate-200 hover:text-[#00A3E0] dark:hover:text-[#00A3E0] bg-[#F8FAFC] dark:bg-[#121927] hover:bg-slate-100 dark:hover:bg-[#1E293B] rounded-xl border border-[#E2E8F0] dark:border-white/15 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs active:scale-95"
+            title="Restablecer búsquedas y actualizar inventario"
+            aria-label="Restablecer búsquedas y actualizar inventario"
+          >
+            <RefreshCw className={`h-4 w-4 sm:h-4.5 sm:w-4.5 ${loading ? 'animate-spin text-[#00A3E0]' : 'text-[#00A3E0]'}`} />
+          </button>
+        </div>
       </div>
     </div>
   );

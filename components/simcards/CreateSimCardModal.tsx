@@ -56,6 +56,7 @@ interface CreateSimCardModalProps {
   companiesList?: { id?: string | number; name?: string }[];
   devicesList?: DeviceItemOption[];
   vehiclesList?: VehicleItemOption[];
+  initialIccid?: string;
 }
 
 
@@ -66,6 +67,7 @@ export default function CreateSimCardModal({
   companiesList = [],
   devicesList = [],
   vehiclesList = [],
+  initialIccid,
 }: CreateSimCardModalProps) {
   const { t } = useTranslation();
 
@@ -101,6 +103,12 @@ export default function CreateSimCardModal({
     const timer = setInterval(updateClock, 1000);
     return () => clearInterval(timer);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && initialIccid) {
+      setSimCardCode(initialIccid);
+    }
+  }, [isOpen, initialIccid]);
 
   // Estados del Escáner y Alertas
   const [isScanning, setIsScanning] = useState<boolean>(false);

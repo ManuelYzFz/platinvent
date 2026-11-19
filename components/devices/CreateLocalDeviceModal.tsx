@@ -49,6 +49,7 @@ interface CreateLocalDeviceModalProps {
   companiesList?: { id?: string | number; name?: string }[];
   vehiclesList?: VehicleRecord[];
   simsList?: SimRecord[];
+  initialImei?: string;
 }
 
 export default function CreateLocalDeviceModal({
@@ -59,6 +60,7 @@ export default function CreateLocalDeviceModal({
   companiesList = [],
   vehiclesList = [],
   simsList = [],
+  initialImei,
 }: CreateLocalDeviceModalProps) {
   const { t } = useTranslation();
 
@@ -358,6 +360,14 @@ export default function CreateLocalDeviceModal({
       void stopCamera();
     }
   }, [isOpen, isScanning, stopCamera]);
+
+  // Si se abre con un código o IMEI pre-escaneado
+  useEffect(() => {
+    if (isOpen && initialImei) {
+      setImei(initialImei);
+      setDevIDNO(initialImei);
+    }
+  }, [isOpen, initialImei]);
 
   useEffect(() => {
     if (!isOpen) {

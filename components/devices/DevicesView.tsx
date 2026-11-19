@@ -31,6 +31,7 @@ export default function DevicesView({ session }: DevicesViewProps) {
   const { t } = useTranslation();
 
   const {
+    devices,
     loading,
     error,
     rawSearchQuery,
@@ -79,11 +80,15 @@ export default function DevicesView({ session }: DevicesViewProps) {
     searchedDevices,
     isExportModalOpen,
     setIsExportModalOpen,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   } = useDevicesInventory(session);
 
   const userRole = getUserRole();
   const isReadOnly = userRole === 'solo_lectura';
   const [isManageCatalogModalOpen, setIsManageCatalogModalOpen] = React.useState(false);
+  const [createInitialImei, setCreateInitialImei] = React.useState<string>('');
 
   const deviceExportColumns: ExportColumn<DeviceRecord>[] = React.useMemo(
     () => [
@@ -198,6 +203,9 @@ export default function DevicesView({ session }: DevicesViewProps) {
         loading={loading}
         isReadOnly={isReadOnly}
         t={t}
+        autoRefreshInterval={autoRefreshInterval}
+        onChangeAutoRefreshInterval={setAutoRefreshInterval}
+        lastUpdated={lastUpdated}
       />
 
       {/* Filtro activo por escaneo */}
@@ -362,9 +370,13 @@ export default function DevicesView({ session }: DevicesViewProps) {
       {!isReadOnly && isCreateModalOpen && (
         <CreateLocalDeviceModal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setCreateInitialImei('');
+          }}
           onAddDevice={handleAddLocalDevice}
           onOpenManageCatalog={() => setIsManageCatalogModalOpen(true)}
+          initialImei={createInitialImei}
         />
       )}
 
@@ -373,6 +385,11 @@ export default function DevicesView({ session }: DevicesViewProps) {
           isOpen={isScanModalOpen}
           onClose={() => setIsScanModalOpen(false)}
           onScanResult={handleScanResult}
+          devices={devices}
+          onOpenCreate={!isReadOnly ? (initialCode) => {
+            setCreateInitialImei(initialCode || '');
+            setIsCreateModalOpen(true);
+          } : undefined}
         />
       )}
 
