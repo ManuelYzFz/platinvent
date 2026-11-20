@@ -28,6 +28,7 @@ import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
 import { saveSingleOfflineSim, enqueueSyncMutation } from '@/lib/services/offlineStorage';
 import { toast } from '@/components/common/Toast';
 import { useScrollLock } from '@/lib/utils/useScrollLock';
+import DeviceSelectCombobox from '@/components/common/DeviceSelectCombobox';
 import type { SimRecord } from '@/lib/types/inventory';
 import { DEFAULT_COMPANY_OPTIONS, COUNTRY_CODES, USE_LOCAL_DATA } from '@/lib/constants';
 import { MAX_LENGTHS, ICCID_MAX_LENGTH, E164_MAX_LENGTH, firstFieldError } from '@/lib/validation/inventory';
@@ -1135,52 +1136,29 @@ export default function CreateSimCardModal({
               </div>
             </div>
 
-            {/* Dispositivo Asignado - Filtrado dinámicamente: SOLO sin vehículos asociados */}
+            {/* Dispositivo Asignado */}
             <div>
               <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <HardDrive className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 Dispositivo Asignado
               </label>
-              <select
-                disabled={!companyName}
-                value={selectedDevIDNO}
-                onChange={(e) => setSelectedDevIDNO(e.target.value)}
-                className={`w-full px-4 py-3 border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold transition-all font-mono shadow-2xs ${
-                  !companyName
-                    ? 'bg-slate-100 dark:bg-[#121927]/60 text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                    : 'bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] cursor-pointer'
-                }`}
-              >
-                <option value="">
-                  {!companyName ? 'Selecciona una Empresa primero' : 'Sin Dispositivo / Libre'}
-                </option>
-                {companyName &&
-                  filteredDevicesForCompany.map((dev, idx) => {
-                    const devId = String(dev.devIDNO ?? dev.devIdno ?? dev.id ?? '');
-                    if (!devId) return null;
-                    const brandModel = [dev.brand, dev.model].filter(Boolean).join(' ');
-                    const brandText = brandModel ? ` - ${brandModel}` : '';
-                    return (
-                      <option key={`dev-opt-${devId}-${idx}`} value={devId}>
-                        {devId}{brandText} (Disponible / Sin Vehículo)
-                      </option>
-                    );
-                  })}
-              </select>
 
-              {!companyName ? (
-                <p className="text-xs text-slate-400 mt-1 italic">
-                  Selecciona una Empresa arriba para ver sus dispositivos disponibles sin vehículo.
-                </p>
-              ) : filteredDevicesForCompany.length === 0 ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">
-                  No hay dispositivos disponibles sin vehículo asociados a {companyName}. Se guardará sin dispositivo.
-                </p>
-              ) : (
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
-                  Mostrando {filteredDevicesForCompany.length} dispositivo(s) disponibles sin vehículo para {companyName}.
-                </p>
-              )}
+              <DeviceSelectCombobox
+                devices={effectiveDevices}
+                vehicles={effectiveVehicles}
+                value={selectedDevIDNO}
+                onChange={(devId, matchedDev) => {
+                  setSelectedDevIDNO(devId);
+                  if (matchedDev?.companyName && !companyName) {
+                    setCompanyName(matchedDev.companyName);
+                  }
+                }}
+                placeholder="Buscar por patente, devIDNO, cliente o modelo..."
+              />
+
+              <p className="text-xs text-slate-400 mt-1">
+                Puedes buscar por placa patente, devIDNO/IMEI, cliente o modelo de equipo.
+              </p>
 
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-600 dark:text-slate-400">Estado de asignación:</span>

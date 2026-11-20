@@ -455,11 +455,11 @@ export default function CreateLocalDeviceModal({
         setSerialID(capturedInfo.serialID);
         appliedCount++;
       }
-      if (capturedInfo.brand && !brand) {
+      if (capturedInfo.brand) {
         setBrand(capturedInfo.brand);
         appliedCount++;
       }
-      if (capturedInfo.model && !model) {
+      if (capturedInfo.model) {
         setModel(capturedInfo.model);
         appliedCount++;
       }
@@ -1004,13 +1004,10 @@ export default function CreateLocalDeviceModal({
                       </div>
                       <div>
                         <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 dark:text-emerald-200 uppercase tracking-wide flex items-center gap-2">
-                          <span>Información Captada de la Etiqueta</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-300">
-                            {capturedInfo.rawList.length} código(s)
-                          </span>
+                          <span>Información Detectada de la Etiqueta</span>
                         </h4>
                         <p className="text-[11px] sm:text-xs text-emerald-800/90 dark:text-emerald-300/80 mt-0.5">
-                          El sistema analizó los datos de la etiqueta. Presiona el botón para autocompletar el formulario.
+                          Datos útiles extraídos de la etiqueta. Presiona el botón para completar el formulario.
                         </p>
                       </div>
                     </div>
@@ -1335,46 +1332,6 @@ export default function CreateLocalDeviceModal({
                         </div>
                       </div>
                     ) : null}
-
-                    {/* Información adicional de la etiqueta (no tiene campo en el formulario: para leer y/o copiar) */}
-                    {capturedInfo.rawList
-                      .filter((c) => c !== capturedInfo.devIDNO && c !== capturedInfo.imei && c !== capturedInfo.serialID && c !== capturedInfo.brand && c !== capturedInfo.model)
-                      .map((otherInfo, idx) => {
-                        const copyKey = `other-${idx}`;
-                        return (
-                          <div key={copyKey} className="flex flex-col justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a] shadow-2xs overflow-hidden min-w-0">
-                            <div className="min-w-0">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1 whitespace-nowrap">
-                                Información adicional #{idx + 1}
-                              </span>
-                              <p className="font-mono text-xs sm:text-sm text-slate-800 dark:text-slate-200 break-all select-all">
-                                {otherInfo}
-                              </p>
-                            </div>
-                            <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-white/5 mt-2">
-                              <span className="text-[10px] text-slate-400 italic">Sólo lectura</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyValue(otherInfo, copyKey)}
-                                className="text-[11px] font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors py-0.5"
-                                title="Copiar este dato"
-                              >
-                                {copiedKey === copyKey ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                    <span className="text-emerald-500">Copiado</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Copiar</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
                   </div>
 
                   {/* BOTÓN PRINCIPAL: Rellenar campos del formulario */}

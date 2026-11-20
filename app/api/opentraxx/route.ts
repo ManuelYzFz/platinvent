@@ -166,17 +166,6 @@ export async function POST(request: Request) {
       }
       const accountInput = body.account.trim().toLowerCase();
 
-      // Acceso de desarrollo local / visualización inmediata
-      if ((accountInput === 'admin' || accountInput === 'hans') && (body.password === 'admin' || body.password === 'admin123')) {
-        const session = createSessionToken(accountInput, 'superadmin');
-        return NextResponse.json({
-          session,
-          accountName: accountInput === 'hans' ? 'Hans' : 'Administrador',
-          role: 'superadmin',
-          isLocalAccount: true,
-        });
-      }
-
       // 1. Intentar autenticación con tabla accounts de MySQL local
       try {
         const localAccount = await findAccountByUsername(accountInput);
