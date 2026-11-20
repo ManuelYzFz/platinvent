@@ -5,6 +5,7 @@ import { X, QrCode, Download, Check, Copy, HardDrive, Barcode } from 'lucide-rea
 import QRCode from 'qrcode';
 import { useTranslation } from '@/lib/i18n';
 import type { DeviceRecord } from '@/lib/types/inventory';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 interface QrCodePreviewModalProps {
   isOpen: boolean;
@@ -76,16 +77,7 @@ export default function QrCodePreviewModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   useEffect(() => {
     return () => {
@@ -115,7 +107,8 @@ export default function QrCodePreviewModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
       onClick={onClose}
     >
       <div 
@@ -123,7 +116,7 @@ export default function QrCodePreviewModal({
         aria-modal="true"
         aria-labelledby="qr-preview-title"
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-[#161b22] p-6 shadow-2xl border border-gray-100 dark:border-[#30363d] flex flex-col items-center max-h-[90vh] overflow-y-auto notranslate" 
+        className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-[#162032] p-6 shadow-2xl border border-slate-200 dark:border-white/14 flex flex-col items-center max-h-[90vh] overflow-y-auto notranslate" 
         translate="no"
       >
         {/* Botón cerrar */}
@@ -131,17 +124,17 @@ export default function QrCodePreviewModal({
           onClick={onClose}
           type="button"
           aria-label={t('cerrar') || 'Cerrar'}
-          className="absolute top-4 right-4 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-[#21262d] hover:text-gray-600 dark:hover:text-white transition-colors cursor-pointer"
+          className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Cabecera */}
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 rounded-xl bg-purple-50 dark:bg-[#21262d] border border-purple-200 dark:border-[#30363d] text-purple-600 dark:text-purple-400">
-            <QrCode className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="p-2 rounded-xl bg-[#00A3E0]/10 dark:bg-[#00A3E0]/15 border border-[#00A3E0]/20 text-[#00A3E0]">
+            <QrCode className="w-5 h-5 text-[#00A3E0]" />
           </div>
-          <h3 id="qr-preview-title" className="text-base font-bold text-[#3a435d] dark:text-white">
+          <h3 id="qr-preview-title" className="text-base font-bold text-slate-900 dark:text-white">
             {t('codigo_qr_dispositivo')}
           </h3>
         </div>
@@ -149,7 +142,7 @@ export default function QrCodePreviewModal({
         {/* Imagen del Código QR (fondo blanco fijo para escaneo óptico en dark mode) */}
         <div 
           style={{ backgroundColor: '#ffffff' }}
-          className="p-4 rounded-2xl border-2 border-purple-200 dark:border-[#30363d] shadow-xs flex items-center justify-center min-w-55 min-h-55"
+          className="p-4 rounded-2xl border-2 border-slate-200 dark:border-white/10 shadow-xs flex items-center justify-center min-w-55 min-h-55"
         >
           {qrDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -167,31 +160,31 @@ export default function QrCodePreviewModal({
 
         {/* Detalles del Dispositivo */}
         <div className="w-full mt-4 space-y-2 text-xs">
-          <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-[#21262d] border border-gray-200/80 dark:border-[#30363d]">
-            <span className="font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-              <HardDrive className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200/80 dark:border-white/10">
+            <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <HardDrive className="w-3.5 h-3.5 text-[#00A3E0]" />
               devIDNO:
             </span>
-            <span className="font-mono font-bold text-[#3a435d] dark:text-white">{devId || '-'}</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">{devId || '-'}</span>
           </div>
 
-          <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50 dark:bg-[#21262d] border border-gray-200/80 dark:border-[#30363d]">
-            <span className="font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-              <Barcode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200/80 dark:border-white/10">
+            <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Barcode className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
               IMEI:
             </span>
-            <span className="font-mono font-bold text-[#3a435d] dark:text-white">{imei || t('no_asignado')}</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">{imei || t('no_asignado')}</span>
           </div>
         </div>
 
         {/* Botones de acción */}
-        <div className="w-full mt-5 grid grid-cols-2 gap-2">
+        <div className="w-full mt-5 grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={handleCopyData}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-[#30363d] text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#21262d] transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-all cursor-pointer"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
             <span>{copied ? t('copiado') : t('copiar')}</span>
           </button>
 
@@ -199,7 +192,7 @@ export default function QrCodePreviewModal({
             type="button"
             onClick={handleDownload}
             disabled={!qrDataUrl}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>{t('descargar_qr')}</span>

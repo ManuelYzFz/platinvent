@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-interface DeviceOptions {
+export interface DeviceOptions {
   brands: string[];
   models: { brand: string; model: string }[];
 }
@@ -10,30 +10,45 @@ interface DeviceOptions {
 const UNASSIGNED = 'Sin Asignar';
 
 /**
- * Marcas y modelos ya registrados (desde /api/local-device-options) para los comboboxes,
+ * Marcas y modelos registrados (desde /api/local-device-options) para los comboboxes,
  * incluyendo siempre "Sin Asignar" al inicio de cada lista.
- * Se recarga cada vez que el modal se abre.
+ * Se recarga cuando el modal se abre o cuando se emite el evento 'device-options-updated'.
  */
-export function useDeviceOptions(isOpen: boolean) {
+export function useDeviceOptions(isOpen = true) {
   const [options, setOptions] = useState<DeviceOptions>({ brands: [], models: [] });
+  const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    let ignore = false;
-    fetch(`/api/local-device-options?t=${Date.now()}`, { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (ignore || !data) return;
+  const fetchOptions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/local-device-options?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
         setOptions({
           brands: Array.isArray(data.brands) ? data.brands : [],
           models: Array.isArray(data.models) ? data.models : [],
         });
-      })
-      .catch((err) => console.warn('Error cargando marcas y modelos:', err));
-    return () => {
-      ignore = true;
+      }
+    } catch (err) {
+      console.warn('Error cargando marcas y modelos:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchOptions();
+
+    const handleUpdate = () => {
+      fetchOptions();
     };
-  }, [isOpen]);
+
+    window.addEventListener('device-options-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('device-options-updated', handleUpdate);
+    };
+  }, [isOpen, fetchOptions]);
 
   const brands = useMemo(() => {
     const list = options.brands.filter(
@@ -59,5 +74,11 @@ export function useDeviceOptions(isOpen: boolean) {
     [options.models]
   );
 
-  return { brands, modelsForBrand };
+  return {
+    brands,
+    modelsForBrand,
+    rawOptions: options,
+    reloadOptions: fetchOptions,
+    loading,
+  };
 }

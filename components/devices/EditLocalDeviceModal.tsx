@@ -21,6 +21,7 @@ import {
   Activity,
   ChevronDown,
   Check,
+  Settings2,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { DeviceRecord, VehicleRecord, SimRecord } from '@/lib/types/inventory';
@@ -30,12 +31,14 @@ import { MAX_LENGTHS, IMEI_LENGTH, firstFieldError } from '@/lib/validation/inve
 import CreatableSelect from '@/components/common/CreatableSelect';
 import { useDeviceOptions } from '@/components/devices/useDeviceOptions';
 import { formatDate } from '@/lib/utils/date-format';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
 
 interface EditLocalDeviceModalProps {
   isOpen: boolean;
   onClose: () => void;
   device: DeviceRecord | null;
   onUpdateDevice: (updatedDevice: DeviceRecord) => void;
+  onOpenManageCatalog?: () => void;
   companiesList?: { id?: string | number; name?: string }[];
   vehiclesList?: VehicleRecord[];
   simsList?: SimRecord[];
@@ -46,6 +49,7 @@ export default function EditLocalDeviceModal({
   onClose,
   device,
   onUpdateDevice,
+  onOpenManageCatalog,
   companiesList = [],
   vehiclesList = [],
   simsList = [],
@@ -77,17 +81,7 @@ export default function EditLocalDeviceModal({
 
   const fetchedFallbackRef = useRef(false);
 
-  // Bloquear scroll de fondo mientras el modal está abierto
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   // Cargar datos del dispositivo a editar cuando se abre el modal o cambia el dispositivo
   useEffect(() => {
@@ -433,24 +427,25 @@ export default function EditLocalDeviceModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-200 notranslate"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 overscroll-contain notranslate"
+      onWheel={(e) => e.stopPropagation()}
       translate="no"
     >
-      <div className="w-full sm:max-w-2xl bg-white dark:bg-[#161b22] rounded-t-2xl sm:rounded-2xl border border-[#e8e9ed] dark:border-[#30363d] shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
+      <div className="w-full sm:max-w-2xl bg-white dark:bg-[#162032] rounded-t-2xl sm:rounded-2xl border border-slate-200 dark:border-white/14 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden">
         {/* Header fijo */}
-        <div className="shrink-0 flex items-center justify-between border-b border-[#e8e9ed] dark:border-[#30363d] px-5 py-4 bg-[#f8f9fc] dark:bg-[#161b22]">
+        <div className="shrink-0 flex items-center justify-between border-b border-slate-200 dark:border-white/10 px-5 py-4 bg-slate-50/70 dark:bg-[#121927]">
           <div className="flex items-center gap-2.5">
-            <div className="rounded-xl bg-[#00acee]/15 p-2.5 text-[#00acee] border border-[#00acee]/20">
+            <div className="rounded-xl bg-[#00A3E0]/15 p-2.5 text-[#00A3E0] border border-[#00A3E0]/20">
               <HardDrive className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-[#3a435d] dark:text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span>Editar Dispositivo</span>
-                <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] border border-[#00acee]/20">
+                <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#00A3E0]/10 dark:bg-[#00A3E0]/20 text-[#00A3E0] border border-[#00A3E0]/20">
                   {devIDNO || device.devIDNO}
                 </span>
               </h3>
-              <p className="text-xs text-[#5c647b] dark:text-gray-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Modifica los datos del registro. Los cambios se sincronizarán en el inventario.
               </p>
             </div>
@@ -458,7 +453,7 @@ export default function EditLocalDeviceModal({
           <button
             onClick={onClose}
             type="button"
-            className="rounded-lg p-2 text-gray-400 hover:bg-[#e8e9ed]/70 dark:hover:bg-[#21262d] hover:text-[#3a435d] dark:hover:text-white transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200/60 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
           >
             <X className="h-5 w-5" />
           </button>
@@ -468,7 +463,7 @@ export default function EditLocalDeviceModal({
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:py-5">
 
           {errorMessage && (
-            <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 p-3 text-xs font-medium text-red-700 dark:text-red-300">
+            <div className="mb-4 rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 p-3 text-xs font-semibold text-red-700 dark:text-red-300">
               {errorMessage}
             </div>
           )}
@@ -478,8 +473,8 @@ export default function EditLocalDeviceModal({
             {/* Fila 1: device No & serie de dispositivo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-[#00acee]" />
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-[#00A3E0]" />
                   {t('modal_id_dispositivo_label')} <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -488,14 +483,14 @@ export default function EditLocalDeviceModal({
                   maxLength={MAX_LENGTHS.device.devidno}
                   onChange={(e) => setDevIDNO(e.target.value)}
                   placeholder="Ej. 4142434445"
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono font-bold outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono font-bold outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-slate-400" />
                   {t('serie_dispositivo')}
                 </label>
                 <input
@@ -504,7 +499,7 @@ export default function EditLocalDeviceModal({
                   maxLength={MAX_LENGTHS.device.serial_id}
                   onChange={(e) => setSerialID(e.target.value)}
                   placeholder="Ej. 4142434445"
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                 />
               </div>
             </div>
@@ -512,7 +507,7 @@ export default function EditLocalDeviceModal({
             {/* Fila 2: IMEI & SimCard (Combobox que autocompleta actualCardNumber) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                   <Barcode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   IMEI
                 </label>
@@ -523,14 +518,14 @@ export default function EditLocalDeviceModal({
                   inputMode="numeric"
                   onChange={(e) => setImei(e.target.value.replace(/\D/g, ''))}
                   placeholder="Ej. 490154203237518"
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all shadow-2xs"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-2xs"
                 />
               </div>
 
               {/* SimCard Combobox */}
               <div className="relative" ref={simComboboxRef}>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 flex items-center gap-2">
+                  <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     SimCard
                   </label>
@@ -541,7 +536,7 @@ export default function EditLocalDeviceModal({
                         setSimInfo('');
                         setActualCardNumber('');
                       }}
-                      className="text-[11px] text-gray-400 hover:text-red-500 font-semibold cursor-pointer"
+                      className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                     >
                       Limpiar
                     </button>
@@ -556,13 +551,13 @@ export default function EditLocalDeviceModal({
                     onChange={(e) => handleSimInputChange(e.target.value)}
                     onFocus={() => setIsSimDropdownOpen(true)}
                     placeholder="Selecciona o escribe un SimCard..."
-                    className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 pl-4 pr-10 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs"
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 pl-4 pr-10 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-2xs"
                   />
                   <button
                     type="button"
                     tabIndex={-1}
                     onClick={() => setIsSimDropdownOpen((prev) => !prev)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-1"
                   >
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isSimDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -570,9 +565,9 @@ export default function EditLocalDeviceModal({
 
                 {/* Desplegable del Combobox con todos los SimCards */}
                 {isSimDropdownOpen && (
-                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#161b22] shadow-xl py-1 animate-in fade-in-50 duration-150">
+                  <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 dark:border-white/14 bg-white dark:bg-[#162032] shadow-xl py-1 animate-in fade-in-50 duration-150">
                     {filteredSims.length === 0 ? (
-                      <div className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 text-center">
+                      <div className="px-4 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">
                         No se encontraron SimCards que coincidan
                       </div>
                     ) : (
@@ -585,7 +580,7 @@ export default function EditLocalDeviceModal({
                             className={`px-4 py-2.5 flex items-center justify-between cursor-pointer transition-colors text-xs sm:text-sm ${
                               isSelected
                                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-bold'
-                                : 'hover:bg-slate-50 dark:hover:bg-[#21262d] text-[#3a435d] dark:text-gray-200'
+                                : 'hover:bg-slate-50 dark:hover:bg-[#1E293B] text-slate-800 dark:text-slate-200'
                             }`}
                           >
                             <div className="flex flex-col gap-0.5">
@@ -597,7 +592,7 @@ export default function EditLocalDeviceModal({
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                                 <span>Tel: <strong className="font-mono">{sim.cardNum || 'N/A'}</strong></span>
                                 {sim.companyName && <span>• {sim.companyName}</span>}
                               </div>
@@ -615,13 +610,13 @@ export default function EditLocalDeviceModal({
             {/* Fila 3: Actual Card Number & Tipo de Dispositivo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center justify-between">
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between">
                   <span className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <Phone className="w-4 h-4 text-[#00A3E0]" />
                     Actual Card Number
                   </span>
                   {actualCardNumber && simInfo && (
-                    <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                    <span className="text-[11px] font-semibold text-[#00A3E0]">
                       Asociado a SimCard
                     </span>
                   )}
@@ -632,12 +627,12 @@ export default function EditLocalDeviceModal({
                   maxLength={MAX_LENGTHS.simcard.card_number}
                   onChange={(e) => setActualCardNumber(e.target.value)}
                   placeholder="Ej. +56987654321"
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-900 dark:text-white font-mono outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+                <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                   {t('modal_tipo_dispositivo_label')} <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2.5">
@@ -646,11 +641,11 @@ export default function EditLocalDeviceModal({
                     onClick={() => setDevType(7)}
                     className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
                       devType === 7
-                        ? 'border-[#00acee] bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#3a435d] dark:text-[#38bdf8] shadow-xs'
-                        : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                        ? 'border-[#00A3E0] bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] shadow-xs'
+                        : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                     }`}
                   >
-                    <Cpu className="h-4 w-4 text-[#00acee]" />
+                    <Cpu className="h-4 w-4 text-[#00A3E0]" />
                     <span>7 - DVR</span>
                   </button>
 
@@ -660,7 +655,7 @@ export default function EditLocalDeviceModal({
                     className={`flex items-center justify-center gap-2 py-3 px-3 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
                       devType === 5
                         ? 'border-indigo-500 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-300 shadow-xs'
-                        : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                        : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                     }`}
                   >
                     <Layers className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -673,48 +668,61 @@ export default function EditLocalDeviceModal({
             {/* Fila 4: Marca & Modelo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
-                  {t('modal_marca_label')}
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200">
+                    {t('modal_marca_label')}
+                  </label>
+                  {onOpenManageCatalog && (
+                    <button
+                      type="button"
+                      onClick={onOpenManageCatalog}
+                      className="text-xs font-bold text-[#00acee] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Administrar catálogo de marcas y modelos"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                      <span>Gestionar</span>
+                    </button>
+                  )}
+                </div>
                 <CreatableSelect
-                  value={brand}
-                  onChange={(val) => {
-                    setBrand(val);
-                    if (val === 'Sin Asignar') {
-                      setModel('Sin Asignar');
-                    } else if (model === 'Sin Asignar') {
-                      setModel('');
-                    }
-                  }}
-                  options={brands}
-                  placeholder={t('modal_selecciona_marca')}
-                  addLabel={t('modal_agregar_marca')}
-                  inputPlaceholder={t('modal_escribe_marca')}
-                  cancelLabel={t('modal_volver_lista')}
-                />
-              </div>
+                    value={brand}
+                    onChange={(val) => {
+                      setBrand(val);
+                      if (val === 'Sin Asignar') {
+                        setModel('Sin Asignar');
+                      } else if (model === 'Sin Asignar') {
+                        setModel('');
+                      }
+                    }}
+                    options={brands}
+                    placeholder={t('modal_selecciona_marca')}
+                    addLabel={t('modal_agregar_marca')}
+                    inputPlaceholder={t('modal_escribe_marca')}
+                    cancelLabel={t('modal_volver_lista')}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
-                  {t('modal_modelo_label')}
-                </label>
-                <CreatableSelect
-                  key={brand.trim().toLowerCase()}
-                  value={model}
-                  onChange={setModel}
-                  options={brand.trim() ? modelsForBrand(brand) : []}
-                  placeholder={t('modal_selecciona_modelo')}
-                  addLabel={t('modal_agregar_modelo')}
-                  inputPlaceholder={t('modal_escribe_modelo')}
-                  cancelLabel={t('modal_volver_lista')}
-                />
+                <div>
+                  <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+                    {t('modal_modelo_label')}
+                  </label>
+                  <CreatableSelect
+                    key={brand.trim().toLowerCase()}
+                    value={model}
+                    onChange={setModel}
+                    options={brand.trim() ? modelsForBrand(brand) : []}
+                    placeholder={t('modal_selecciona_modelo')}
+                    addLabel={t('modal_agregar_modelo')}
+                    inputPlaceholder={t('modal_escribe_modelo')}
+                    cancelLabel={t('modal_volver_lista')}
+                  />
+                </div>
               </div>
-            </div>
 
             {/* Fila 5: Estado install y Estado de Servicio */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
               <div>
-                <label className="block text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2">
+                <label className="block text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                   {t('modal_estado_instalacion_label')} <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -727,7 +735,7 @@ export default function EditLocalDeviceModal({
                     className={`flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       install === 1
                         ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 shadow-xs'
-                        : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                        : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                     }`}
                   >
                     <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -745,7 +753,7 @@ export default function EditLocalDeviceModal({
                     className={`flex items-center justify-center gap-2 py-3.5 px-3 rounded-xl border text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                       install === 0
                         ? 'border-amber-500 dark:border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 shadow-xs'
-                        : 'border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] text-[#5c647b] dark:text-gray-400 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42]'
+                        : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121927] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#1E293B]'
                     }`}
                   >
                     <Tag className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -755,14 +763,14 @@ export default function EditLocalDeviceModal({
               </div>
 
               <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-[#00acee]" />
+                <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-[#00A3E0]" />
                   {t('estado_servicio_label') || 'Estado de Servicio'} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={serviceStatus}
                   onChange={(e) => setServiceStatus(e.target.value as 'active' | 'inactive')}
-                  className="w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base font-semibold text-[#3a435d] dark:text-white outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all shadow-2xs cursor-pointer"
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base font-semibold text-slate-800 dark:text-white outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs cursor-pointer"
                 >
                   <option value="active">🟢 {t('servicio_activo') || 'Servicio Activo'}</option>
                   <option value="inactive">🟠 {t('sin_servicio') || 'Sin Servicio'}</option>
@@ -771,11 +779,11 @@ export default function EditLocalDeviceModal({
             </div>
 
             {/* Fila 6: Empresa y Vehículo Asignado */}
-            <div className="pt-3 border-t border-[#e8e9ed] dark:border-[#30363d] space-y-4">
+            <div className="pt-3 border-t border-slate-200 dark:border-white/10 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div>
-                  <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-[#00acee]" />
+                  <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#00A3E0]" />
                     {t('modal_compania_label')} {install === 1 && <span className="text-red-500">*</span>}
                   </label>
                   <select
@@ -790,10 +798,10 @@ export default function EditLocalDeviceModal({
                       setSelectedVehicleVid('');
                       setCustomVehiclePlate('');
                     }}
-                    className={`w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all shadow-2xs ${
+                    className={`w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all shadow-2xs ${
                       install !== 1
-                        ? 'bg-gray-100 dark:bg-[#161b22] text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                        : 'bg-white dark:bg-[#0d1117] text-[#3a435d] dark:text-white focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 cursor-pointer'
+                        ? 'bg-slate-100 dark:bg-[#121927] text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                        : 'bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] cursor-pointer'
                     }`}
                     required={install === 1}
                   >
@@ -801,7 +809,7 @@ export default function EditLocalDeviceModal({
                       {install === 1 ? t('modal_selecciona_compania') : t('modal_no_aplica_no_instalado')}
                     </option>
                     {install === 1 && (
-                      <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-blue-600 dark:text-blue-400">
+                      <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-[#00A3E0] dark:text-[#00A3E0]">
                         {t('registrar_empresa_opcion') || '+ Registrar Empresa / Cliente...'}
                       </option>
                     )}
@@ -812,10 +820,10 @@ export default function EditLocalDeviceModal({
                     ))}
                   </select>
                   {install === 1 && selectedCompany === '__REGISTER_NEW_COMPANY__' && (
-                    <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0c1c2e] border border-blue-200 dark:border-[#1e3a5f] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                    <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0F1726] border border-blue-200 dark:border-[#00A3E0]/30 rounded-xl space-y-1.5 animate-in fade-in duration-150">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          <Building2 className="w-3.5 h-3.5 text-[#00A3E0]" />
                           {t('nombre_nueva_empresa') || 'Registrar nueva empresa / cliente:'} <span className="text-red-500">*</span>
                         </label>
                         <button
@@ -824,7 +832,7 @@ export default function EditLocalDeviceModal({
                             setSelectedCompany('');
                             setCustomCompanyName('');
                           }}
-                          className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                          className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                         >
                           {t('cancelar') || 'Cancelar'}
                         </button>
@@ -836,7 +844,7 @@ export default function EditLocalDeviceModal({
                         maxLength={MAX_LENGTHS.company.name}
                         onChange={(e) => setCustomCompanyName(e.target.value)}
                         placeholder="Ej: Transportes del Norte SpA"
-                        className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-blue-300 dark:border-blue-700 rounded-lg text-sm font-semibold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-[#121927] border border-blue-300 dark:border-white/10 rounded-lg text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#00A3E0] shadow-2xs"
                         autoFocus
                       />
                     </div>
@@ -844,7 +852,7 @@ export default function EditLocalDeviceModal({
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold uppercase tracking-wider text-[#3a435d] dark:text-gray-200 mb-2 flex items-center gap-2">
+                  <label className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
                     <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     {t('modal_vehiculo_label')} {install === 1 && <span className="text-red-500">*</span>}
                   </label>
@@ -858,10 +866,10 @@ export default function EditLocalDeviceModal({
                         setCustomVehiclePlate('');
                       }
                     }}
-                    className={`w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all font-mono shadow-2xs ${
+                    className={`w-full rounded-xl border border-slate-200 dark:border-white/10 py-3 px-4 text-sm sm:text-base font-semibold outline-none transition-all font-mono shadow-2xs ${
                       install !== 1 || !selectedCompany
-                        ? 'bg-gray-100 dark:bg-[#161b22] text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                        : 'bg-white dark:bg-[#0d1117] text-[#3a435d] dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 cursor-pointer'
+                        ? 'bg-slate-100 dark:bg-[#121927] text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                        : 'bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer'
                     }`}
                     required={install === 1}
                   >
@@ -892,7 +900,7 @@ export default function EditLocalDeviceModal({
                   </select>
 
                   {install === 1 && selectedCompany && selectedVehicleVid === '__REGISTER_NEW_VEHICLE__' && (
-                    <div className="mt-2.5 p-3 bg-emerald-50/70 dark:bg-[#0c2317] border border-emerald-200 dark:border-[#14532d] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                    <div className="mt-2.5 p-3 bg-emerald-50/70 dark:bg-[#0F1726] border border-emerald-200 dark:border-emerald-800/40 rounded-xl space-y-1.5 animate-in fade-in duration-150">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
                           <Truck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -904,7 +912,7 @@ export default function EditLocalDeviceModal({
                             setSelectedVehicleVid('');
                             setCustomVehiclePlate('');
                           }}
-                          className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                          className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                         >
                           {t('cancelar') || 'Cancelar'}
                         </button>
@@ -916,7 +924,7 @@ export default function EditLocalDeviceModal({
                         maxLength={MAX_LENGTHS.vehicle.plate_number}
                         onChange={(e) => setCustomVehiclePlate(e.target.value.toUpperCase())}
                         placeholder="Ej: AB-123-CD o ABCD-12"
-                        className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-emerald-300 dark:border-emerald-700 rounded-lg text-sm font-mono font-bold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-2xs uppercase"
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-[#121927] border border-emerald-300 dark:border-emerald-700 rounded-lg text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs uppercase"
                         autoFocus
                       />
                     </div>
@@ -938,51 +946,51 @@ export default function EditLocalDeviceModal({
 
               {/* Información de Fechas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-xl bg-[#f8f9fc] dark:bg-[#131722] border border-[#e8e9ed] dark:border-[#30363d] flex items-center justify-between gap-2 text-xs text-[#5c647b] dark:text-gray-400">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400">
                   <div className="flex items-center gap-2 font-medium">
                     <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{t('fecha_registro') || 'Fecha Registro'}</span>
                   </div>
-                  <span className="font-mono font-bold text-[#3a435d] dark:text-gray-200 bg-white dark:bg-[#1a202c] px-2.5 py-1 rounded border border-[#e8e9ed] dark:border-[#30363d]">
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#121927] px-2.5 py-1 rounded border border-slate-200 dark:border-white/10">
                     {device.registrationDate || '2026-08-12'}
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-[#f8f9fc] dark:bg-[#131722] border border-[#e8e9ed] dark:border-[#30363d] flex items-center justify-between gap-2 text-xs text-[#5c647b] dark:text-gray-400">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400">
                   <div className="flex items-center gap-2 font-medium">
-                    <Clock className="w-4 h-4 text-[#00acee]" />
+                    <Clock className="w-4 h-4 text-[#00A3E0]" />
                     <span>{t('fecha_asignacion') || 'Fecha Asignación'}</span>
                   </div>
-                  <span className="font-mono font-bold text-[#3a435d] dark:text-gray-200 bg-white dark:bg-[#1a202c] px-2.5 py-1 rounded border border-[#e8e9ed] dark:border-[#30363d]">
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#121927] px-2.5 py-1 rounded border border-slate-200 dark:border-white/10">
                     {previewAssignmentDate ? previewAssignmentDate : t('sin_fecha_asignada')}
                   </span>
                 </div>
               </div>
 
               {/* Generación Automática de Código QR */}
-              <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-[#1a1226] border border-purple-200/80 dark:border-[#4c1d95] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-purple-900 dark:text-purple-200">
+              <div className="p-4 rounded-xl bg-purple-50/60 dark:bg-[#0F1726] border border-purple-200/80 dark:border-purple-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-purple-900 dark:text-purple-200">
                 <div className="flex items-center gap-2 font-medium">
                   <QrCode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <span>{t('generacion_codigo_qr')}</span>
                 </div>
-                <span className="font-mono text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 bg-white dark:bg-[#241738] px-3 py-1.5 rounded-md border border-purple-200 dark:border-[#581c87]">
+                <span className="font-mono text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 bg-white dark:bg-[#121927] px-3 py-1.5 rounded-md border border-purple-200 dark:border-purple-800">
                   {devIDNO.trim() ? `${t('qr_listo')} (ID: ${devIDNO.trim()}${imei.trim() ? ` | IMEI: ${imei.trim()}` : ''})` : t('ingresa_devidno_qr')}
                 </span>
               </div>
             </div>
 
             {/* Botones de acción */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#e8e9ed] dark:border-[#30363d]">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#1a2230] px-5 py-3 text-sm font-bold text-[#5c647b] dark:text-gray-300 hover:bg-[#e8e9ed]/50 dark:hover:bg-[#242f42] transition-colors cursor-pointer min-h-11"
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#121927] px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] transition-colors cursor-pointer min-h-11"
               >
                 {t('modal_cancelar')}
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 rounded-xl bg-[#00acee] hover:bg-[#0099d4] px-6 py-3 text-sm font-bold text-white shadow-sm transition-all cursor-pointer min-h-11 active:scale-95"
+                className="flex items-center gap-2 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] px-6 py-3 text-sm font-bold text-white shadow-xs transition-all cursor-pointer min-h-11 active:scale-95"
               >
                 <Save className="h-4 w-4" />
                 <span>Guardar Cambios</span>

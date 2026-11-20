@@ -12,6 +12,7 @@ import {
   formatRegistrationTime,
   getMatchedPatent,
 } from './sim-helpers';
+import { toast } from '@/components/common/Toast';
 import {
   getOfflineSims,
   saveOfflineSims,
@@ -34,10 +35,15 @@ export function useSimCardsInventory(session?: string) {
   const searchQuery = useDebounce(rawSearchQuery, 250);
   const [scanFilter, setScanFilter] = useState<string>('');
 
+  // Auto-refresco en segundo plano
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s por defecto
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   const [isSimCardModalOpen, setIsSimCardModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [selectedEditSim, setSelectedEditSim] = useState<SimRecord | null>(null);
   const [isScanSearchModalOpen, setIsScanSearchModalOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   const [expandedRows, setExpandedRows] = useState({
     simsWithDevices: true,
@@ -114,6 +120,7 @@ export function useSimCardsInventory(session?: string) {
         setDevices(devList);
         await saveOfflineDevices(devList);
       }
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching SIM Cards data:', err);
       setSims((currentSims) => {
@@ -154,108 +161,93 @@ export function useSimCardsInventory(session?: string) {
     setError(data?.error || 'Datos inválidos: no se pudo guardar.');
   }, [fetchData]);
 
-  // Exportar SIM Cards a CSV compatible con Excel
+  // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
-    if (sims.length === 0) return;
-    const headers = [
-      '#',
-      'ICCID SIM',
-      'Número Teléfono',
-      'Compañía / Cliente',
-      'Dispositivo Asignado (devIDNO)',
-      'Patente Vehículo',
-      'Operador',
-      'Estado Instalación',
-      'Fecha Registro',
-    ];
+    setIsExportModalOpen(true);
+  }, []);
 
-    const rows = sims.map((s, idx) => {
-      const devId = getSimDevIdno(s);
-      const isAssigned = devId !== '-';
-      const company = getSimCompanyName(s) || 'Sin Asignar';
-      const patent = getMatchedPatent(s, vehicles, devices, isAssigned) || (isAssigned ? 'Sin Asignar' : '-');
-      const installStatus = Number(s.status) === 1 ? 'Instalado' : 'No Instalado';
-      const regDate = formatRegistrationTime(s.registrationTime);
-
-      return [
-        `"${idx + 1}"`,
-        `"${String(s.simCard ?? '').replace(/"/g, '""')}"`,
-        `"${String(s.phoneNum ?? '').replace(/"/g, '""')}"`,
-        `"${company.replace(/"/g, '""')}"`,
-        `"${devId.replace(/"/g, '""')}"`,
-        `"${patent.replace(/"/g, '""')}"`,
-        `"${String(s.serviceProvider ?? '').replace(/"/g, '""')}"`,
-        `"${installStatus}"`,
-        `"${regDate}"`,
-      ].join(';');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `simcards_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [sims, vehicles, devices]);
-
-  // Importar SIM Cards desde CSV o JSON
+  // Importar SIM Cards desde CSV, JSON o Excel
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        if (!text) return;
-        if (file.name.endsWith('.json')) {
-          const parsed = JSON.parse(text);
-          const list: SimRecord[] = Array.isArray(parsed)
-            ? parsed
-            : (Array.isArray(parsed.infos)
-              ? parsed.infos
-              : (Array.isArray(parsed.sims) ? parsed.sims : []));
-          for (const item of list) {
-            await saveSingleOfflineSim(item);
-            await enqueueSyncMutation('sim', 'create', { sim: item });
-          }
-        } else {
-          const lines = text.split(/\r?\n/).filter((line) => line.trim());
-          if (lines.length > 1) {
-            const separator = lines[0].includes(';') ? ';' : ',';
-            for (let i = 1; i < lines.length; i++) {
-              const cols = lines[i].split(separator).map((c) => c.replace(/^"|"$/g, '').trim());
-              if (cols[1]) {
-                const parsedId = Number(cols[0]);
-                const isInstalled =
-                  cols[7]?.includes('1') ||
-                  (cols[7]?.toLowerCase().includes('instalado') && !cols[7]?.toLowerCase().includes('no'));
-                const newSim: SimRecord = {
-                  id: !isNaN(parsedId) && parsedId > 0 ? parsedId : (Date.now() + i),
-                  simCard: normalizeICCID(cols[1]),
-                  phoneNum: cols[2] || undefined,
-                  companyName: cols[3] && cols[3] !== 'Sin Asignar' ? cols[3] : undefined,
-                  devId: cols[4] && cols[4] !== 'Sin Asignar' && cols[4] !== '-' ? cols[4] : undefined,
-                  serviceProvider: cols[6] || 'Entel',
-                  status: isInstalled ? 1 : 0,
-                };
-                await saveSingleOfflineSim(newSim);
-                await enqueueSyncMutation('sim', 'create', { sim: newSim });
-              }
-            }
-          }
-        }
-        void fetchData(false);
-      } catch (err) {
-        console.error('Error al importar archivo de SIM Cards:', err);
-      } finally {
-        e.target.value = '';
+
+    const processRows = async (rows: string[][]) => {
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].map((c) => String(c ?? '').trim());
+        if (!cols[1]) continue;
+        const parsedId = Number(cols[0]);
+        const isInstalled =
+          cols[7]?.includes('1') ||
+          (cols[7]?.toLowerCase().includes('instalado') && !cols[7]?.toLowerCase().includes('no'));
+        const newSim: SimRecord = {
+          id: !isNaN(parsedId) && parsedId > 0 ? parsedId : (Date.now() + i),
+          simCard: normalizeICCID(cols[1]),
+          phoneNum: cols[2] || undefined,
+          companyName: cols[3] && cols[3] !== 'Sin Asignar' ? cols[3] : undefined,
+          devId: cols[4] && cols[4] !== 'Sin Asignar' && cols[4] !== '-' ? cols[4] : undefined,
+          serviceProvider: cols[6] || 'Entel',
+          status: isInstalled ? 1 : 0,
+        };
+        await saveSingleOfflineSim(newSim);
+        await enqueueSyncMutation('sim', 'create', { sim: newSim });
       }
     };
-    reader.readAsText(file);
+
+    if (file.name.endsWith('.xlsx')) {
+      // Leer Excel como ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          if (!buffer) return;
+          const XLSX = await import('xlsx');
+          const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          await processRows(aoa.map((row) => row.map((cell) => String(cell ?? ''))));
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar Excel de SIM Cards:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // JSON o CSV — leer como texto
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target?.result as string;
+          if (!text) return;
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(text);
+            const list: SimRecord[] = Array.isArray(parsed)
+              ? parsed
+              : (Array.isArray(parsed.infos)
+                ? parsed.infos
+                : (Array.isArray(parsed.sims) ? parsed.sims : []));
+            for (const item of list) {
+              await saveSingleOfflineSim(item);
+              await enqueueSyncMutation('sim', 'create', { sim: item });
+            }
+          } else {
+            const lines = text.split(/\r?\n/).filter((line) => line.trim());
+            if (lines.length > 1) {
+              const separator = lines[0].includes(';') ? ';' : ',';
+              const rows = lines.map((l) => l.split(separator).map((c) => c.replace(/^"|"$/g, '').trim()));
+              await processRows(rows);
+            }
+          }
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar archivo de SIM Cards:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
   }, [fetchData]);
 
   const handleOpenEditSim = (sim: SimRecord) => {
@@ -288,6 +280,7 @@ export function useSimCardsInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+      toast.info('Actualización de SIM guardada offline');
       return;
     }
 
@@ -299,14 +292,18 @@ export function useSimCardsInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos: no se pudo guardar.');
       } else if (!res.ok) {
         await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+        toast.info('Actualización de SIM pendiente de sincronizar');
       } else {
+        toast.success(`SIM Card ${updatedSim.cardNum || updatedSim.simCard || ''} actualizada`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al actualizar SIM Card, encolando offline:', err);
       await enqueueSyncMutation('sim', 'update', { sim: updatedSim });
+      toast.info('Actualización de SIM guardada offline');
     }
   };
 
@@ -337,6 +334,47 @@ export function useSimCardsInventory(session?: string) {
     };
   }, [fetchData]);
 
+  // Auto-refresco en segundo plano con pausa inteligente
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+
+    // Pausar si algún modal está abierto
+    const isAnyModalOpen =
+      isSimCardModalOpen ||
+      isEditModalOpen ||
+      isScanSearchModalOpen ||
+      isExportModalOpen;
+
+    if (isAnyModalOpen) return;
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      void fetchData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    autoRefreshInterval,
+    isSimCardModalOpen,
+    isEditModalOpen,
+    isScanSearchModalOpen,
+    isExportModalOpen,
+    fetchData,
+  ]);
+
+  // Sincronizar inmediatamente al volver a enfocar la pestaña
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && autoRefreshInterval > 0) {
+        void fetchData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autoRefreshInterval, fetchData]);
+
   // Filtrado de búsqueda
   const filteredSims = useMemo(() => {
     let result = sims;
@@ -353,25 +391,39 @@ export function useSimCardsInventory(session?: string) {
     }
 
     if (searchQuery.trim()) {
-      const qRaw = searchQuery.toLowerCase().trim();
-      const qNorm = normalizeICCID(qRaw).toLowerCase();
+      const terms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
 
       result = result.filter((s) => {
         const simCardRaw = String(s.simCard ?? '').toLowerCase();
         const simCardNorm = normalizeICCID(simCardRaw).toLowerCase();
+        const simCardNoDash = simCardRaw.replace(/[^0-9a-z]/gi, '');
         const cardNum = String(s.cardNum ?? '').toLowerCase();
         const devId = String(s.devIDNO ?? '').toLowerCase();
         const company = String(s.companyName ?? s.company?.name ?? '').toLowerCase();
         const patent = String(s.vehiIDNO ?? '').toLowerCase();
+        const patentNoDash = patent.replace(/[^0-9a-z]/gi, '');
+        const provider = String(s.serviceProvider ?? '').toLowerCase();
+        const phone = String(s.msisdn ?? s.phoneNum ?? '').toLowerCase();
+        const plan = String(s.planName ?? '').toLowerCase();
 
-        return (
-          simCardRaw.includes(qRaw) ||
-          simCardNorm.includes(qNorm) ||
-          cardNum.includes(qRaw) ||
-          devId.includes(qRaw) ||
-          company.includes(qRaw) ||
-          patent.includes(qRaw)
-        );
+        return terms.every((term) => {
+          const termNoDash = term.replace(/[^0-9a-z]/gi, '');
+          const termNorm = normalizeICCID(term).toLowerCase();
+
+          return (
+            simCardRaw.includes(term) ||
+            simCardNorm.includes(termNorm) ||
+            (termNoDash && simCardNoDash.includes(termNoDash)) ||
+            cardNum.includes(term) ||
+            devId.includes(term) ||
+            company.includes(term) ||
+            patent.includes(term) ||
+            (termNoDash && patentNoDash.includes(termNoDash)) ||
+            provider.includes(term) ||
+            phone.includes(term) ||
+            plan.includes(term)
+          );
+        });
       });
     }
 
@@ -431,6 +483,9 @@ export function useSimCardsInventory(session?: string) {
 
   return {
     sims,
+    filteredSims,
+    isExportModalOpen,
+    setIsExportModalOpen,
     setSims,
     vehicles,
     devices,
@@ -465,6 +520,9 @@ export function useSimCardsInventory(session?: string) {
     isScanSearchModalOpen,
     setIsScanSearchModalOpen,
     fetchData,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   };
 }
 

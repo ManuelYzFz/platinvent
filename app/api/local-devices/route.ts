@@ -4,7 +4,7 @@ import path from 'path';
 import { validateApiSession, requireRole, WRITE_ROLES } from '@/lib/utils/api-auth';
 import { USE_LOCAL_DATA } from '@/lib/constants';
 import { ValidationError } from '@/lib/validation/inventory';
-import { listDevices, saveDevice, countDevices } from '@/lib/db-inventory';
+import { listDevices, saveDevice, countDevices, deleteDevice } from '@/lib/db-inventory';
 
 // Simple in-process write lock to prevent race conditions on concurrent POSTs.
 // NOTE: For multi-instance / serverless production, replace with database or
@@ -280,4 +280,125 @@ export async function POST(req: Request) {
     writeLock = false;
   }
 }
+
+// DELETE: Eliminar dispositivo (MySQL o fallback local JSON)
+export async function DELETE(req: Request) {
+  const auth = validateApiSession(req);
+  if (!auth.valid && auth.response) return auth.response;
+
+  // Solo superadmin/admin pueden eliminar (verificado en el servidor)
+  const roleCheck = await requireRole(req, WRITE_ROLES);
+  if (!roleCheck.ok) return roleCheck.response;
+
+  if (writeLock) {
+    return NextResponse.json(
+      { error: 'El servidor está procesando otra solicitud. Intenta nuevamente.' },
+      { status: 503 }
+    );
+  }
+
+  try {
+    writeLock = true;
+    const body = await req.json().catch(() => ({}));
+    const id = body.id;
+    const devIdno = body.devIDNO || body.devIdno;
+
+    if (!id && !devIdno) {
+      return NextResponse.json(
+        { error: 'Se requiere el id o devIDNO del dispositivo a eliminar.' },
+        { status: 400 }
+      );
+    }
+
+    if (!USE_LOCAL_DATA) {
+      const result = await deleteDevice(id, devIdno);
+      return NextResponse.json({ success: true, count: await countDevices(), deleted: result });
+    }
+
+    // Local JSON fallback
+    const rawContent = await fs.readFile(LOCAL_JSON_FILE, 'utf-8');
+    const parsed = JSON.parse(rawContent);
+    const infos = Array.isArray(parsed.infos) ? parsed.infos : [];
+
+    const targetDevIdno = String(devIdno || '').trim();
+    const targetId = id !== undefined && id !== null ? String(id).trim() : '';
+
+    const deviceToDelete = infos.find((d: { id?: number | string; devIDNO?: string; devIdno?: string }) => {
+      if (targetId && String(d.id ?? '').trim() === targetId) return true;
+      if (targetDevIdno && String(d.devIDNO ?? d.devIdno ?? '').trim() === targetDevIdno) return true;
+      return false;
+    });
+
+    if (!deviceToDelete) {
+      return NextResponse.json({ error: 'Dispositivo no encontrado en datos locales.' }, { status: 404 });
+    }
+
+    parsed.infos = infos.filter((d: { id?: number | string; devIDNO?: string; devIdno?: string }) => {
+      if (targetId && String(d.id ?? '').trim() === targetId) return false;
+      if (targetDevIdno && String(d.devIDNO ?? d.devIdno ?? '').trim() === targetDevIdno) return false;
+      return true;
+    });
+
+    await fs.writeFile(LOCAL_JSON_FILE, JSON.stringify(parsed, null, 2), 'utf-8');
+
+    // Desvincular de vehicles.json si estaba asignado
+    const actualDevIdno = String(deviceToDelete.devIDNO ?? deviceToDelete.devIdno ?? targetDevIdno).trim();
+    if (actualDevIdno) {
+      const LOCAL_VEHICLES_FILE = path.join(LOCAL_DATA_DIR, 'vehicles.json');
+      try {
+        const rawVeh = await fs.readFile(LOCAL_VEHICLES_FILE, 'utf-8');
+        const parsedVeh = JSON.parse(rawVeh);
+        const vehInfos = Array.isArray(parsedVeh.infos) ? parsedVeh.infos : [];
+        let vehModified = false;
+        for (const v of vehInfos) {
+          if (Array.isArray(v.devList)) {
+            const initialLen = v.devList.length;
+            v.devList = v.devList.filter((d: { name?: string; id?: string | number; serialID?: string }) => {
+              return String(d.name ?? d.id ?? d.serialID) !== actualDevIdno && (targetId ? String(d.id) !== targetId : true);
+            });
+            if (v.devList.length !== initialLen) vehModified = true;
+          }
+        }
+        if (vehModified) {
+          await fs.writeFile(LOCAL_VEHICLES_FILE, JSON.stringify(parsedVeh, null, 2), 'utf-8');
+        }
+      } catch (e) {
+        console.warn('Advertencia desvinculando de vehicles.json:', e);
+      }
+
+      // Desvincular de simCard.json
+      const LOCAL_SIM_FILE = path.join(LOCAL_DATA_DIR, 'simCard.json');
+      try {
+        const rawSim = await fs.readFile(LOCAL_SIM_FILE, 'utf-8');
+        const parsedSim = JSON.parse(rawSim);
+        const simInfos = Array.isArray(parsedSim.infos) ? parsedSim.infos : [];
+        let simModified = false;
+        for (const s of simInfos) {
+          if (String(s.devIDNO ?? s.devIdno ?? '').trim() === actualDevIdno) {
+            s.devIDNO = null;
+            s.vehiIDNO = null;
+            s.install = 0;
+            simModified = true;
+          }
+        }
+        if (simModified) {
+          await fs.writeFile(LOCAL_SIM_FILE, JSON.stringify(parsedSim, null, 2), 'utf-8');
+        }
+      } catch (e) {
+        console.warn('Advertencia desvinculando de simCard.json:', e);
+      }
+    }
+
+    return NextResponse.json({ success: true, count: parsed.infos.length, deleted: deviceToDelete });
+  } catch (error: any) {
+    console.error('Error eliminando dispositivo:', error);
+    return NextResponse.json(
+      { error: error?.message || 'Error interno al eliminar el dispositivo' },
+      { status: 500 }
+    );
+  } finally {
+    writeLock = false;
+  }
+}
+
 

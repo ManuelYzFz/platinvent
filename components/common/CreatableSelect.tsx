@@ -16,10 +16,10 @@ interface CreatableSelectProps {
 }
 
 const selectClass =
-  'w-full rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] py-3 px-4 text-sm sm:text-base text-[#3a435d] dark:text-white font-semibold outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all cursor-pointer shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed';
+  'w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] py-3 px-4 text-sm sm:text-base text-slate-800 dark:text-white font-medium outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all cursor-pointer shadow-2xs disabled:opacity-60 disabled:cursor-not-allowed';
 
 const inputClass =
-  'w-full rounded-xl border border-[#00acee] bg-white dark:bg-[#0d1117] py-2.5 px-3.5 text-sm text-[#3a435d] dark:text-white font-semibold outline-none focus:ring-2 focus:ring-[#00acee]/20 transition-all';
+  'w-full rounded-xl border border-[#00A3E0] bg-white dark:bg-[#0F1726] py-2.5 px-3.5 text-sm text-slate-800 dark:text-white font-medium outline-none focus:ring-1 focus:ring-[#00A3E0] transition-all';
 
 /**
  * Combobox con opción "+ Agregar nuevo...": lista los valores existentes y permite

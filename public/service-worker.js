@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vtraxx-cache-v10';
+const CACHE_NAME = 'vtraxx-cache-v11';
 const PRECACHE_URLS = [
   '/',
   '/login',

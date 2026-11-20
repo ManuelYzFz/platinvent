@@ -77,3 +77,12 @@ Abre [http://localhost:3000](http://localhost:3000) en el navegador.
 - **`npm run build`**: Compila y optimiza el proyecto para producción con Turbopack y verificación estricta de TypeScript.
 - **`npm run start`**: Inicia la aplicación previamente compilada en modo producción.
 - **`npm run lint`**: Ejecuta el análisis de código con ESLint.
+
+---
+
+## 🌿 Flujo de Trabajo en Equipo y Ramas (Git)
+
+- **`main`**: Rama principal protegida y estable.
+- **`Manuel`**: Rama de desarrollo activo y nuevas características.
+- **Colaboración**: Cada integrante desarrolla en su propia rama y unifica cambios mediante Pull Requests (PR).
+- **Variables de Entorno**: Usar `.env.example` como plantilla para configurar `.env` localmente sin subir secretos.

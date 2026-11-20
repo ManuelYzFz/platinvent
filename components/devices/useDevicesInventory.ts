@@ -23,6 +23,7 @@ import {
   formatRegistrationDate,
   formatServiceStatus,
 } from './device-helpers';
+import { toast } from '@/components/common/Toast';
 
 export const PAGE_SIZE = 10;
 
@@ -36,6 +37,10 @@ export function useDevicesInventory(session?: string) {
   const searchQuery = useDebounce(rawSearchQuery, 250);
   const [scanFilter, setScanFilter] = useState<string>('');
 
+  // Auto-refresco en segundo plano
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30); // 30s por defecto
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   // Modales
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
@@ -43,6 +48,9 @@ export function useDevicesInventory(session?: string) {
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
   const [selectedEditDevice, setSelectedEditDevice] = useState<DeviceRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [selectedDeleteDevice, setSelectedDeleteDevice] = useState<DeviceRecord | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   // Expansión de secciones
   const [expandedRows, setExpandedRows] = useState({
@@ -88,6 +96,16 @@ export function useDevicesInventory(session?: string) {
   const handleCloseEditModal = useCallback(() => {
     setIsEditModalOpen(false);
     setSelectedEditDevice(null);
+  }, []);
+
+  const handleOpenDeleteDevice = useCallback((dev: DeviceRecord) => {
+    setSelectedDeleteDevice(dev);
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleCloseDeleteModal = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    setSelectedDeleteDevice(null);
   }, []);
 
   const fetchData = useCallback(async (showLoading = false) => {
@@ -154,6 +172,7 @@ export function useDevicesInventory(session?: string) {
         setCompanies(compList);
         await saveOfflineCompanies(compList);
       }
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching local devices:', err);
       setDevices((currentDevs) => {
@@ -203,6 +222,51 @@ export function useDevicesInventory(session?: string) {
     };
   }, [fetchData]);
 
+  // Auto-refresco en segundo plano con pausa inteligente
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+
+    // Pausar si algún modal está abierto
+    const isAnyModalOpen =
+      isCreateModalOpen ||
+      isEditModalOpen ||
+      isScanModalOpen ||
+      isDeleteModalOpen ||
+      isQrModalOpen ||
+      isExportModalOpen;
+
+    if (isAnyModalOpen) return;
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return;
+      }
+      void fetchData(false);
+    }, autoRefreshInterval * 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    autoRefreshInterval,
+    isCreateModalOpen,
+    isEditModalOpen,
+    isScanModalOpen,
+    isDeleteModalOpen,
+    isQrModalOpen,
+    isExportModalOpen,
+    fetchData,
+  ]);
+
+  // Sincronizar inmediatamente al volver a enfocar la pestaña
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && autoRefreshInterval > 0) {
+        void fetchData(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [autoRefreshInterval, fetchData]);
+
   // El servidor rechazó los datos (400): no se reintenta offline; se recarga y se muestra el motivo
   const handleRejectedSave = useCallback(async (res: Response) => {
     const data = await res.json().catch(() => null);
@@ -217,6 +281,7 @@ export function useDevicesInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('device', 'create', newDevice);
+      toast.info('Dispositivo guardado offline (se sincronizará al reconectar)');
       return;
     }
 
@@ -228,14 +293,18 @@ export function useDevicesInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos: no se pudo guardar.');
       } else if (!res.ok) {
         await enqueueSyncMutation('device', 'create', newDevice);
+        toast.info('Guardado localmente. Pendiente de sincronizar');
       } else {
+        toast.success(`Dispositivo ${newDevice.devIDNO || newDevice.serialID || ''} registrado`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al guardar dispositivo, encolando offline:', err);
       await enqueueSyncMutation('device', 'create', newDevice);
+      toast.info('Dispositivo guardado offline');
     }
   }, [fetchData, handleRejectedSave]);
 
@@ -258,6 +327,7 @@ export function useDevicesInventory(session?: string) {
     const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
     if (isOffline) {
       await enqueueSyncMutation('device', 'update', updatedDevice);
+      toast.info('Actualización guardada offline');
       return;
     }
 
@@ -269,16 +339,66 @@ export function useDevicesInventory(session?: string) {
       });
       if (res.status === 400) {
         await handleRejectedSave(res);
+        toast.error('Datos inválidos al actualizar');
       } else if (!res.ok) {
         await enqueueSyncMutation('device', 'update', updatedDevice);
+        toast.info('Actualización pendiente de sincronizar');
       } else {
+        toast.success(`Dispositivo ${updatedDevice.devIDNO || updatedDevice.serialID || ''} actualizado`);
         void fetchData(false);
       }
     } catch (err) {
       console.warn('Error de red al actualizar dispositivo, encolando offline:', err);
       await enqueueSyncMutation('device', 'update', updatedDevice);
+      toast.info('Actualización guardada offline');
     }
   };
+
+  const handleDeleteLocalDevice = useCallback(async (devToDelete?: DeviceRecord | null) => {
+    const target = devToDelete || selectedDeleteDevice;
+    if (!target) return;
+
+    // Optimistic UI update
+    setDevices((prev) =>
+      prev.filter((d) => {
+        if (target.id !== undefined && target.id !== null && d.id !== undefined && d.id !== null) {
+          return String(d.id) !== String(target.id);
+        }
+        const devId = String(d.devIDNO ?? d.devIdno ?? '').trim();
+        const targetDevId = String(target.devIDNO ?? target.devIdno ?? '').trim();
+        if (devId && targetDevId) {
+          return devId !== targetDevId;
+        }
+        return true;
+      })
+    );
+
+    try {
+      const res = await fetch('/api/local-devices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: target.id,
+          devIDNO: target.devIDNO || target.devIdno,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Error al eliminar el dispositivo');
+      }
+
+      toast.info(`Dispositivo ${target.devIDNO || target.serialID || ''} eliminado`);
+      void fetchData(false);
+    } catch (err: unknown) {
+      console.error('Error al eliminar dispositivo:', err);
+      const msg = err instanceof Error ? err.message : 'Error al eliminar dispositivo';
+      setError(msg);
+      toast.error(msg);
+      void fetchData(false);
+      throw err;
+    }
+  }, [fetchData, selectedDeleteDevice]);
 
   // Mapas rápidos de vehículos
   const vehicleByDeviceId = useMemo(() => {
@@ -314,125 +434,98 @@ export function useDevicesInventory(session?: string) {
     return undefined;
   }, [vehicleByDeviceId, vehicleByPatent]);
 
-  // Exportar dispositivos a CSV compatible con Excel
+  // Abrir modal de exportación personalizada (Excel, PDF, CSV)
   const handleExport = useCallback(() => {
-    if (devices.length === 0) return;
-    const headers = [
-      'ID Dispositivo (devIDNO)',
-      'IMEI',
-      'Serie',
-      'Marca',
-      'Modelo',
-      'Tipo (devType)',
-      'Patente Asignada',
-      'Compañía / Cliente',
-      'Estado Instalación',
-      'Estado Servicio',
-      'Fecha Asignación',
-      'Fecha Registro',
-    ];
-    const rows = devices.map((d) => {
-      const matchedVeh = getMatchedVehicle(d);
-      const patent = getCleanPatent(d, matchedVeh) || 'Sin Asignar';
-      const company = getCleanCompany(d, matchedVeh) || 'Sin Asignar';
-      const installStatus =
-        Number(d.install) === 1
-          ? 'Instalado'
-          : Number(d.install) === 0
-            ? 'No Instalado'
-            : 'Indefinido';
-      const devTypeStr =
-        Number(d.devType) === 7 ? 'MDVR' : Number(d.devType) === 5 ? 'GPS' : String(d.devType ?? '-');
-      const serviceStatusStr = formatServiceStatus(d, matchedVeh).label;
-      const asgDate = formatAssignmentDate(d, matchedVeh);
-      const regDate = formatRegistrationDate(d);
+    setIsExportModalOpen(true);
+  }, []);
 
-      return [
-        `"${String(d.devIDNO ?? d.id ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.imei ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.serialID ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.brand ?? '').replace(/"/g, '""')}"`,
-        `"${String(d.model ?? '').replace(/"/g, '""')}"`,
-        `"${devTypeStr}"`,
-        `"${patent.replace(/"/g, '""')}"`,
-        `"${company.replace(/"/g, '""')}"`,
-        `"${installStatus}"`,
-        `"${serviceStatusStr}"`,
-        `"${asgDate}"`,
-        `"${regDate}"`,
-      ].join(';');
-    });
-
-    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dispositivos_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [devices, getMatchedVehicle]);
-
-  // Importar dispositivos desde CSV o JSON
+  // Importar dispositivos desde CSV, JSON o Excel
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        if (!text) return;
-        if (file.name.endsWith('.json')) {
-          const parsed = JSON.parse(text);
-          const list: DeviceRecord[] = Array.isArray(parsed)
-            ? parsed
-            : (Array.isArray(parsed.infos)
-              ? parsed.infos
-              : (Array.isArray(parsed.devices) ? parsed.devices : []));
-          for (const item of list) {
-            await handleAddLocalDevice(item);
-          }
-        } else {
-          const lines = text.split(/\r?\n/).filter((line) => line.trim());
-          if (lines.length > 1) {
-            const separator = lines[0].includes(';') ? ';' : ',';
-            for (let i = 1; i < lines.length; i++) {
-              const cols = lines[i].split(separator).map((c) => c.replace(/^"|"$/g, '').trim());
-              if (cols[0]) {
-                const installCol = cols.length > 8 ? cols[8] : cols[7];
-                const isInstalled = installCol ? (installCol.toLowerCase().includes('no') || installCol.includes('0') ? 0 : 1) : 1;
-                const devTypeStr = cols[5]?.toUpperCase();
-                const devType = devTypeStr?.includes('MDVR') ? 7 : devTypeStr?.includes('GPS') ? 5 : undefined;
-                const patent = cols[6] && cols[6] !== 'Sin Asignar' ? cols[6] : undefined;
-                const company = cols[7] && cols[7] !== 'Sin Asignar' && cols.length > 8 ? cols[7] : undefined;
 
-                const newDev: DeviceRecord = {
-                  id: cols[0],
-                  devIDNO: cols[0],
-                  imei: cols[1] || undefined,
-                  serialID: cols[2] || undefined,
-                  brand: cols[3] || undefined,
-                  model: cols[4] || undefined,
-                  devType: devType ?? undefined,
-                  vehiIdno: patent,
-                  companyName: company,
-                  install: isInstalled,
-                };
-                await handleAddLocalDevice(newDev);
-              }
-            }
-          }
-        }
-        void fetchData(false);
-      } catch (err) {
-        console.error('Error al importar archivo de dispositivos:', err);
-      } finally {
-        e.target.value = '';
+    const processRows = async (rows: string[][]) => {
+      for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i].map((c) => String(c ?? '').trim());
+        if (!cols[0]) continue;
+        const installCol = cols.length > 8 ? cols[8] : cols[7];
+        const isInstalled = installCol
+          ? installCol.toLowerCase().includes('no') || installCol.includes('0') ? 0 : 1
+          : 1;
+        const devTypeStr = cols[5]?.toUpperCase();
+        const devType = devTypeStr?.includes('MDVR') ? 7 : devTypeStr?.includes('GPS') ? 5 : undefined;
+        const patent = cols[6] && cols[6] !== 'Sin Asignar' ? cols[6] : undefined;
+        const company = cols[7] && cols[7] !== 'Sin Asignar' && cols.length > 8 ? cols[7] : undefined;
+        const newDev: DeviceRecord = {
+          id: cols[0],
+          devIDNO: cols[0],
+          imei: cols[1] || undefined,
+          serialID: cols[2] || undefined,
+          brand: cols[3] || undefined,
+          model: cols[4] || undefined,
+          devType: devType ?? undefined,
+          vehiIdno: patent,
+          companyName: company,
+          install: isInstalled,
+        };
+        await handleAddLocalDevice(newDev);
       }
     };
-    reader.readAsText(file);
+
+    if (file.name.endsWith('.xlsx')) {
+      // Leer Excel como ArrayBuffer
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          if (!buffer) return;
+          const XLSX = await import('xlsx');
+          const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          await processRows(aoa.map((row) => row.map((cell) => String(cell ?? ''))));
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar Excel de dispositivos:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // JSON o CSV — leer como texto
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const text = event.target?.result as string;
+          if (!text) return;
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(text);
+            const list: DeviceRecord[] = Array.isArray(parsed)
+              ? parsed
+              : (Array.isArray(parsed.infos)
+                ? parsed.infos
+                : (Array.isArray(parsed.devices) ? parsed.devices : []));
+            for (const item of list) {
+              await handleAddLocalDevice(item);
+            }
+          } else {
+            const lines = text.split(/\r?\n/).filter((line) => line.trim());
+            if (lines.length > 1) {
+              const separator = lines[0].includes(';') ? ';' : ',';
+              const rows = lines.map((l) => l.split(separator).map((c) => c.replace(/^"|"$/g, '').trim()));
+              await processRows(rows);
+            }
+          }
+          void fetchData(false);
+        } catch (err) {
+          console.error('Error al importar archivo de dispositivos:', err);
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
   }, [handleAddLocalDevice, fetchData]);
 
   // Filtrado de búsqueda
@@ -450,26 +543,39 @@ export function useDevicesInventory(session?: string) {
     }
 
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
+      const terms = searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
       result = result.filter((d) => {
         const matchedVeh = getMatchedVehicle(d);
         const cleanPat = (getCleanPatent(d, matchedVeh) || '').toLowerCase();
+        const cleanPatNoDash = cleanPat.replace(/[^a-z0-9]/gi, '');
         const cleanComp = (getCleanCompany(d, matchedVeh) || '').toLowerCase();
         const devId = String(d.devIDNO ?? d.id ?? '').toLowerCase();
         const brand = String(d.brand ?? '').toLowerCase();
         const model = String(d.model ?? '').toLowerCase();
         const imei = String(d.imei ?? '').toLowerCase();
+        const imeiNoDash = imei.replace(/[^0-9]/g, '');
         const serial = String(d.serialID ?? '').toLowerCase();
+        const simCard = String(d.actualCardNumber ?? d.simInfo ?? d.sim ?? d.cardNum ?? '').toLowerCase();
+        const phone = String(d.phoneNum ?? d.msisdn ?? '').toLowerCase();
+        const devType = String(d.devType ?? d.type ?? '').toLowerCase();
 
-        return (
-          cleanPat.includes(q) ||
-          cleanComp.includes(q) ||
-          devId.includes(q) ||
-          brand.includes(q) ||
-          model.includes(q) ||
-          imei.includes(q) ||
-          serial.includes(q)
-        );
+        return terms.every((term) => {
+          const termNoDash = term.replace(/[^a-z0-9]/gi, '');
+          return (
+            cleanPat.includes(term) ||
+            (termNoDash && cleanPatNoDash.includes(termNoDash)) ||
+            cleanComp.includes(term) ||
+            devId.includes(term) ||
+            brand.includes(term) ||
+            model.includes(term) ||
+            imei.includes(term) ||
+            (termNoDash && imeiNoDash.includes(termNoDash)) ||
+            serial.includes(term) ||
+            simCard.includes(term) ||
+            phone.includes(term) ||
+            devType.includes(term)
+          );
+        });
       });
     }
 
@@ -518,6 +624,9 @@ export function useDevicesInventory(session?: string) {
 
   return {
     devices,
+    searchedDevices,
+    isExportModalOpen,
+    setIsExportModalOpen,
     loading,
     error,
     rawSearchQuery,
@@ -555,11 +664,20 @@ export function useDevicesInventory(session?: string) {
     selectedEditDevice,
     isEditModalOpen,
     setIsEditModalOpen,
+    selectedDeleteDevice,
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
     handleOpenQrCode,
     handleCloseQrModal,
     handleOpenEditDevice,
     handleCloseEditModal,
+    handleOpenDeleteDevice,
+    handleCloseDeleteModal,
+    handleDeleteLocalDevice,
     fetchData,
+    autoRefreshInterval,
+    setAutoRefreshInterval,
+    lastUpdated,
   };
 }
 

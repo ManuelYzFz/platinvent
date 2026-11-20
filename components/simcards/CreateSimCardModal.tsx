@@ -26,6 +26,9 @@ import {
 import { useTranslation } from '@/lib/i18n';
 import { decodeBarcodeFromImage } from '@/lib/utils/barcode-decoder';
 import { saveSingleOfflineSim, enqueueSyncMutation } from '@/lib/services/offlineStorage';
+import { toast } from '@/components/common/Toast';
+import { useScrollLock } from '@/lib/utils/useScrollLock';
+import DeviceSelectCombobox from '@/components/common/DeviceSelectCombobox';
 import type { SimRecord } from '@/lib/types/inventory';
 import { DEFAULT_COMPANY_OPTIONS, COUNTRY_CODES, USE_LOCAL_DATA } from '@/lib/constants';
 import { MAX_LENGTHS, ICCID_MAX_LENGTH, E164_MAX_LENGTH, firstFieldError } from '@/lib/validation/inventory';
@@ -54,6 +57,7 @@ interface CreateSimCardModalProps {
   companiesList?: { id?: string | number; name?: string }[];
   devicesList?: DeviceItemOption[];
   vehiclesList?: VehicleItemOption[];
+  initialIccid?: string;
 }
 
 
@@ -64,6 +68,7 @@ export default function CreateSimCardModal({
   companiesList = [],
   devicesList = [],
   vehiclesList = [],
+  initialIccid,
 }: CreateSimCardModalProps) {
   const { t } = useTranslation();
 
@@ -99,6 +104,12 @@ export default function CreateSimCardModal({
     const timer = setInterval(updateClock, 1000);
     return () => clearInterval(timer);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && initialIccid) {
+      setSimCardCode(initialIccid);
+    }
+  }, [isOpen, initialIccid]);
 
   // Estados del Escáner y Alertas
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -311,17 +322,7 @@ export default function CreateSimCardModal({
     setIsScanning(false);
   }, []);
 
-  // Bloquear scroll de fondo mientras el modal está abierto
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   // Limpiar escáner al abrir/cerrar modal
   useEffect(() => {
@@ -474,6 +475,67 @@ export default function CreateSimCardModal({
     }
   };
 
+  // Capturar fotograma desde el stream activo de la cámara
+  const capturePhotoFromVideo = async () => {
+    const readerElement = document.getElementById('simcard-reader');
+    const video = readerElement?.querySelector('video');
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setCameraError('Esperando que la cámara enfoque... Intenta de nuevo.');
+      return;
+    }
+
+    setIsAnalyzingFile(true);
+    setCameraError(null);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.95));
+        if (blob) {
+          const file = new File([blob], 'snapshot.jpg', { type: 'image/jpeg' });
+          const rawText = await decodeBarcodeFromImage(file, 'create-simcard-file-helper');
+          const normalized = normalizeICCID(rawText.trim());
+          setSimCardCode(normalized);
+          setScanSuccess(true);
+          setIsScanning(false);
+          void stopCamera();
+        }
+      }
+    } catch (err) {
+      console.warn('Error al capturar foto desde la cámara:', err);
+      setCameraError('No se detectó un código nítido en el momento del disparo. Acerca más la cámara a la SIM Card con buena iluminación.');
+    } finally {
+      setIsAnalyzingFile(false);
+    }
+  };
+
+  // Manejar clic en "Tomar foto": si hay cámara activa captura, si no la activa
+  const handleTakePhotoClick = async () => {
+    setCameraError(null);
+
+    // Si la cámara ya está activa, capturar fotograma
+    if (isScanning) {
+      await capturePhotoFromVideo();
+      return;
+    }
+
+    // Si el navegador soporta getUserMedia, abrir la cámara directamente
+    if (typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function') {
+      try {
+        await startCamera();
+        return;
+      } catch (err) {
+        console.warn('No se pudo iniciar transmisión web de cámara, recurriendo a input nativo:', err);
+      }
+    }
+
+    // Fallback: abrir cámara nativa del dispositivo
+    cameraInputRef.current?.click();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -623,6 +685,7 @@ export default function CreateSimCardModal({
         await saveSingleOfflineSim(simPayload);
         await enqueueSyncMutation('sim', 'create', { sim: simPayload });
         setSubmittedMessage(`¡SIM Card guardada localmente! (Pendiente de sincronizar)`);
+        toast.info('SIM Card guardada offline');
         if (onSuccess) onSuccess(simPayload);
         resetFormAndClose();
         return;
@@ -631,6 +694,7 @@ export default function CreateSimCardModal({
       const savedSim = data.sim || simPayload;
       await saveSingleOfflineSim(savedSim);
       setSubmittedMessage(`¡SIM Card "${simCardCode.trim()}" registrada exitosamente!`);
+      toast.success(`SIM Card "${simCardCode.trim()}" registrada con éxito`);
 
       if (onSuccess) onSuccess(savedSim);
       resetFormAndClose();
@@ -640,10 +704,12 @@ export default function CreateSimCardModal({
         await saveSingleOfflineSim(simPayload);
         await enqueueSyncMutation('sim', 'create', { sim: simPayload });
         setSubmittedMessage(`¡SIM Card guardada offline! Se sincronizará al reconectar.`);
+        toast.info('SIM Card guardada offline');
         if (onSuccess) onSuccess(simPayload);
         resetFormAndClose();
       } catch {
         setErrorMessage(err instanceof Error ? err.message : 'No se pudo conectar con el servidor.');
+        toast.error('No se pudo conectar con el servidor');
       }
     } finally {
       setIsSubmitting(false);
@@ -653,20 +719,23 @@ export default function CreateSimCardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-200">
-      <div className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl border border-[#e8e9ed] overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] notranslate" translate="no">
+    <div 
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 animate-in fade-in duration-200 overscroll-contain"
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div className="w-full sm:max-w-2xl rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#162032] shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[92dvh] sm:max-h-[90vh] notranslate" translate="no">
         
         {/* Cabecera del Modal */}
-        <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-white border-b border-[#e8e9ed]">
+        <div className="shrink-0 flex items-center justify-between px-4 sm:px-6 py-4 bg-white dark:bg-[#121927] border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
               <Radio className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-[#3a435d] tracking-wide">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-wide">
                 {t('modal_agregar_simcard_titulo') || t('agregar_simcard')}
               </h2>
-              <p className="text-xs sm:text-sm text-[#5c647b]">
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                 {t('modal_agregar_simcard_desc') || 'Registra una nueva tarjeta SIM en el inventario'}
               </p>
             </div>
@@ -677,7 +746,7 @@ export default function CreateSimCardModal({
               onClose();
             }}
             type="button"
-            className="p-2 rounded-lg text-gray-400 hover:text-[#3a435d] hover:bg-[#e8e9ed]/50 transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#1E293B] transition-colors cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
           >
             <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
@@ -689,50 +758,28 @@ export default function CreateSimCardModal({
           
           {/* Alertas */}
           {errorMessage && (
-            <div className="p-3.5 sm:p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm font-semibold flex items-center gap-2">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-300 text-xs sm:text-sm font-semibold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {submittedMessage && (
-            <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in fade-in">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in fade-in">
               <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
               <span>{submittedMessage}</span>
             </div>
           )}
 
           {/* Sección de Escaneo con Cámara */}
-          <div className="rounded-xl border border-[#e8e9ed] bg-[#f8f9fc] p-4 sm:p-5 space-y-3.5">
+          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#0F1726] p-4 sm:p-5 space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Scan className="w-4 h-4 sm:w-5 sm:h-5 text-[#00acee]" />
-                <span className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider">
+                <Scan className="w-4 h-4 sm:w-5 sm:h-5 text-[#00A3E0]" />
+                <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                   Escáner de Cámara
                 </span>
               </div>
-              {!isScanning ? (
-                <button
-                  type="button"
-                  onClick={() => void startCamera()}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00acee] hover:bg-[#0098d4] text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>{t('activar_camara')}</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsScanning(false);
-                    void stopCamera();
-                  }}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                  <span>{t('detener_camara')}</span>
-                </button>
-              )}
             </div>
 
             {/* Hidden inputs para captura nativa o galería */}
@@ -756,49 +803,76 @@ export default function CreateSimCardModal({
             {isScanning && (
               <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 bg-black min-h-65 md:min-h-75 flex items-center justify-center">
                 <div id="simcard-reader" className="w-full h-full min-h-65 md:min-h-75" />
+                <div className="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-950/80 backdrop-blur-xs border border-white/10 text-white text-xs">
+                  <span className="text-[11px] text-slate-300 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Cámara activa
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={capturePhotoFromVideo}
+                      disabled={isAnalyzingFile}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Capturar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsScanning(false);
+                        void stopCamera();
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Cerrar</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
             {isAnalyzingFile && (
-              <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 animate-pulse">
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/40 text-indigo-800 dark:text-indigo-300 text-xs sm:text-sm font-bold flex items-center justify-center gap-2.5 animate-pulse">
                 <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
                 <span>{t('analizando_codigo_foto')}</span>
               </div>
             )}
 
-            {/* BOTONES ADICIONALES: TOMAR FOTO CON CÁMARA O SUBIR DE GALERÍA */}
+            {/* BOTONES PRINCIPALES: ACTIVAR CÁMARA O BUSCAR IMAGEN */}
             <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={isAnalyzingFile}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                onClick={() => void startCamera()}
+                disabled={isScanning || isAnalyzingFile}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Camera className="w-4 h-4 text-indigo-200" />
-                <span>{t('tomar_foto_camara')}</span>
+                <span>Activar cámara</span>
               </button>
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
                 disabled={isAnalyzingFile}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-700 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 shadow-2xs"
-                title="Abrir galería de fotos"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-[#121927] dark:hover:bg-[#1E293B] active:scale-98 text-slate-700 dark:text-slate-200 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer disabled:opacity-50 border border-slate-200 dark:border-white/10 shadow-2xs"
+                title="Buscar imagen en el equipo"
               >
-                <UploadCloud className="w-4 h-4 text-indigo-600" />
-                <span>{t('buscar_imagen_galeria')}</span>
+                <UploadCloud className="w-4 h-4 text-[#00A3E0]" />
+                <span>Buscar imagen</span>
               </button>
             </div>
 
             {cameraError && (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>{cameraError}</span>
               </div>
             )}
 
-            {/* Badge de Escaneo Exitoso */}
             {scanSuccess && (
-              <div className="p-3.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in zoom-in-95">
+              <div className="p-3.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 text-xs sm:text-sm font-bold flex items-center gap-2 animate-in zoom-in-95">
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 shrink-0" />
                 <span>¡Código escaneado correctamente y cargado en simCard!</span>
               </div>
@@ -810,8 +884,8 @@ export default function CreateSimCardModal({
             
             {/* Campo 1: simCard */}
             <div>
-              <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Radio className="w-4 h-4 text-emerald-600" />
+              <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Radio className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 simCard <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -823,13 +897,13 @@ export default function CreateSimCardModal({
                   inputMode="numeric"
                   onChange={(e) => setSimCardCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="Ej: 89560900000127126850"
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                 />
                 {simCardCode && (
                   <button
                     type="button"
                     onClick={() => setSimCardCode('')}
-                    className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -838,9 +912,9 @@ export default function CreateSimCardModal({
 
               {/* Indicador exclusivo de Compañía de Red */}
               {detectedOperator && (
-                <div className="mt-2 flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#3a435d] animate-in fade-in">
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium">Compañía de red:</span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                <div className="mt-2 flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 animate-in fade-in">
+                  <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">Compañía de red:</span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800">
                     <Radio className="w-3.5 h-3.5 text-blue-500" />
                     {detectedOperator.operator}
                   </span>
@@ -852,15 +926,15 @@ export default function CreateSimCardModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* No. SIM */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-emerald-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   No. SIM <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-32 px-3 py-3 bg-[#f8f9fc] border border-[#e8e9ed] rounded-xl text-sm font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 transition-all cursor-pointer shrink-0"
+                    className="w-32 px-3 py-3 bg-slate-50 dark:bg-[#121927] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] transition-all cursor-pointer shrink-0"
                   >
                     {COUNTRY_CODES.map((c) => (
                       <option key={c.code} value={c.code}>
@@ -876,13 +950,13 @@ export default function CreateSimCardModal({
                       value={phoneNumber}
                       onChange={handlePhoneNumberChange}
                       placeholder={countryCode === '+56' ? '912345678' : '123456789'}
-                      className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-bold text-[#3a435d] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-2xs pr-10"
+                      className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs pr-10"
                     />
                     {phoneNumber && (
                       <button
                         type="button"
                         onClick={() => setPhoneNumber('')}
-                        className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                         title="Borrar número"
                       >
                         <X className="w-5 h-5" />
@@ -890,7 +964,7 @@ export default function CreateSimCardModal({
                     )}
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-[#5c647b]">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {countryCode === '+56'
                     ? 'Para Chile (🇨🇱 +56) se requiere el prefijo 9 (Ej: 912345678).'
                     : `Ingresa el número telefónico para ${countryCode}.`}
@@ -899,18 +973,18 @@ export default function CreateSimCardModal({
 
               {/* Empresa */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-[#00acee]" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-[#00A3E0]" />
                   Empresa <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
                   value={companyName}
                   onChange={(e) => handleCompanyChange(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-[#00acee] focus:ring-2 focus:ring-[#00acee]/20 transition-all cursor-pointer shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all cursor-pointer shadow-2xs"
                 >
                   <option value="">Selecciona una Empresa *</option>
-                  <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-blue-600">
+                  <option value="__REGISTER_NEW_COMPANY__" className="font-bold text-[#00A3E0]">
                     {t('registrar_empresa_sim_opcion') || '+ Registrar Empresa...'}
                   </option>
                   {availableCompanies.map((comp) => (
@@ -920,10 +994,10 @@ export default function CreateSimCardModal({
                   ))}
                 </select>
                 {companyName === '__REGISTER_NEW_COMPANY__' && (
-                  <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0c1c2e] border border-blue-200 dark:border-[#1e3a5f] rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                  <div className="mt-2.5 p-3 bg-blue-50/70 dark:bg-[#0F1726] border border-blue-200 dark:border-[#00A3E0]/30 rounded-xl space-y-1.5 animate-in fade-in duration-150">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        <Building2 className="w-3.5 h-3.5 text-[#00A3E0]" />
                         {t('nombre_nueva_empresa') || 'Registrar nueva empresa:'} <span className="text-red-500">*</span>
                       </label>
                       <button
@@ -932,7 +1006,7 @@ export default function CreateSimCardModal({
                           setCompanyName('');
                           setCustomCompanyName('');
                         }}
-                        className="text-[11px] text-gray-400 hover:text-red-600 font-semibold cursor-pointer"
+                        className="text-[11px] text-slate-400 hover:text-red-500 font-semibold cursor-pointer"
                       >
                         {t('cancelar') || 'Cancelar'}
                       </button>
@@ -944,13 +1018,13 @@ export default function CreateSimCardModal({
                       maxLength={MAX_LENGTHS.company.name}
                       onChange={(e) => setCustomCompanyName(e.target.value)}
                       placeholder="Ej: Transportes del Norte SpA"
-                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#0d1117] border border-blue-300 dark:border-blue-700 rounded-lg text-sm font-semibold text-[#3a435d] dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 shadow-2xs"
+                      className="w-full px-3.5 py-2.5 bg-white dark:bg-[#121927] border border-blue-300 dark:border-white/10 rounded-lg text-sm font-semibold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#00A3E0] shadow-2xs"
                       autoFocus
                     />
                   </div>
                 )}
                 {!companyName && (
-                  <p className="text-xs text-gray-400 mt-1 italic">
+                  <p className="text-xs text-slate-400 mt-1 italic">
                     Campo obligatorio. Selecciona la empresa a la que pertenece la SIM.
                   </p>
                 )}
@@ -961,15 +1035,15 @@ export default function CreateSimCardModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Estado (Combobox: 1 habilitado, 2 no habilitado) */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-emerald-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   Estado <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
                   value={status}
                   onChange={(e) => setStatus(Number(e.target.value))}
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-emerald-500 transition-all cursor-pointer shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all cursor-pointer shadow-2xs"
                 >
                   <option value={1}>1 - Habilitado</option>
                   <option value={2}>2 - No habilitado</option>
@@ -978,8 +1052,8 @@ export default function CreateSimCardModal({
 
               {/* Tipo de Plan */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-blue-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-[#00A3E0]" />
                   Tipo de Plan
                 </label>
                 <input
@@ -988,7 +1062,7 @@ export default function CreateSimCardModal({
                   maxLength={MAX_LENGTHS.simcard.plan_name}
                   onChange={(e) => setPlan(e.target.value)}
                   placeholder="Ej: Plan M2M Data"
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-blue-500 transition-all shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs"
                 />
               </div>
             </div>
@@ -997,8 +1071,8 @@ export default function CreateSimCardModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Ciudad de Emisión */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-amber-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                   Ciudad de Emisión
                 </label>
                 <input
@@ -1007,14 +1081,14 @@ export default function CreateSimCardModal({
                   maxLength={MAX_LENGTHS.simcard.city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Ej: Santiago"
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-amber-500 transition-all shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-2xs"
                 />
               </div>
 
               {/* Card Merchant */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-purple-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   Card Merchant
                 </label>
                 <input
@@ -1023,7 +1097,7 @@ export default function CreateSimCardModal({
                   maxLength={MAX_LENGTHS.simcard.card_merchant}
                   onChange={(e) => setCardMerchant(e.target.value)}
                   placeholder="Ej: Giesecke+Devrient / Idemia"
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-purple-500 transition-all shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-2xs"
                 />
               </div>
             </div>
@@ -1032,8 +1106,8 @@ export default function CreateSimCardModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* MSISDN */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Hash className="w-4 h-4 text-indigo-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Hash className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                   MSISDN
                 </label>
                 <input
@@ -1043,79 +1117,56 @@ export default function CreateSimCardModal({
                   inputMode="numeric"
                   onChange={(e) => setMsisdn(e.target.value.replace(/\D/g, ''))}
                   placeholder="Ej: 56912345678"
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-mono font-semibold text-[#3a435d] focus:outline-none focus:border-indigo-500 transition-all shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-mono font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-2xs"
                 />
               </div>
 
               {/* Expiration Date (Calendario) */}
               <div>
-                <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-rose-600" />
+                <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                   Expiration Date
                 </label>
                 <input
                   type="date"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold text-[#3a435d] focus:outline-none focus:border-rose-500 transition-all cursor-pointer shadow-2xs"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 rounded-xl text-sm sm:text-base font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition-all cursor-pointer shadow-2xs"
                 />
               </div>
             </div>
 
-            {/* Dispositivo Asignado - Filtrado dinámicamente: SOLO sin vehículos asociados */}
+            {/* Dispositivo Asignado */}
             <div>
-              <label className="text-xs sm:text-sm font-bold text-[#3a435d] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <HardDrive className="w-4 h-4 text-emerald-600" />
+              <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <HardDrive className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 Dispositivo Asignado
               </label>
-              <select
-                disabled={!companyName}
-                value={selectedDevIDNO}
-                onChange={(e) => setSelectedDevIDNO(e.target.value)}
-                className={`w-full px-4 py-3 border border-[#e8e9ed] rounded-xl text-sm sm:text-base font-semibold transition-all font-mono shadow-2xs ${
-                  !companyName
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-[#3a435d] focus:outline-none focus:border-emerald-500 cursor-pointer'
-                }`}
-              >
-                <option value="">
-                  {!companyName ? 'Selecciona una Empresa primero' : 'Sin Dispositivo / Libre'}
-                </option>
-                {companyName &&
-                  filteredDevicesForCompany.map((dev, idx) => {
-                    const devId = String(dev.devIDNO ?? dev.devIdno ?? dev.id ?? '');
-                    if (!devId) return null;
-                    const brandModel = [dev.brand, dev.model].filter(Boolean).join(' ');
-                    const brandText = brandModel ? ` - ${brandModel}` : '';
-                    return (
-                      <option key={`dev-opt-${devId}-${idx}`} value={devId}>
-                        {devId}{brandText} (Disponible / Sin Vehículo)
-                      </option>
-                    );
-                  })}
-              </select>
 
-              {!companyName ? (
-                <p className="text-xs text-gray-400 mt-1 italic">
-                  Selecciona una Empresa arriba para ver sus dispositivos disponibles sin vehículo.
-                </p>
-              ) : filteredDevicesForCompany.length === 0 ? (
-                <p className="text-xs text-amber-700 mt-1 font-medium">
-                  No hay dispositivos disponibles sin vehículo asociados a {companyName}. Se guardará sin dispositivo.
-                </p>
-              ) : (
-                <p className="text-xs text-emerald-700 mt-1 font-medium">
-                  Mostrando {filteredDevicesForCompany.length} dispositivo(s) disponibles sin vehículo para {companyName}.
-                </p>
-              )}
+              <DeviceSelectCombobox
+                devices={effectiveDevices}
+                vehicles={effectiveVehicles}
+                value={selectedDevIDNO}
+                onChange={(devId, matchedDev) => {
+                  setSelectedDevIDNO(devId);
+                  if (matchedDev?.companyName && !companyName) {
+                    setCompanyName(matchedDev.companyName);
+                  }
+                }}
+                placeholder="Buscar por patente, devIDNO, cliente o modelo..."
+              />
+
+              <p className="text-xs text-slate-400 mt-1">
+                Puedes buscar por placa patente, devIDNO/IMEI, cliente o modelo de equipo.
+              </p>
 
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span className="font-semibold text-[#5c647b]">Estado de asignación:</span>
+                <span className="font-semibold text-slate-600 dark:text-slate-400">Estado de asignación:</span>
                 <span
                   className={`font-extrabold px-2.5 py-1 rounded border ${
                     selectedDevIDNO
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-amber-50 text-amber-800 border-amber-200'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                      : 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-500/30'
                   }`}
                 >
                   {selectedDevIDNO ? '1 (Instalado en Dispositivo)' : '0 (Libre / No Instalado)'}
@@ -1124,32 +1175,32 @@ export default function CreateSimCardModal({
             </div>
 
             {/* Fecha de Registro */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#f8f9fc] border border-[#e8e9ed] flex items-center justify-between text-xs sm:text-sm text-[#5c647b]">
+            <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50 dark:bg-[#0F1726] border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs sm:text-sm text-slate-600 dark:text-slate-400">
               <div className="flex items-center gap-2 font-medium">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#00acee]" />
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-[#00A3E0]" />
                 <span>Fecha de Registro:</span>
               </div>
-              <span className="font-mono font-bold text-[#3a435d] bg-white px-3 py-1.5 rounded-md border border-[#e8e9ed]">
+              <span className="font-mono font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-[#121927] px-3 py-1.5 rounded-md border border-slate-200 dark:border-white/10">
                 {liveTimestamp || 'Timestamp Unix (ms)'}
               </span>
             </div>
 
             {/* Pie de Página del Modal */}
-            <div className="pt-4 border-t border-[#e8e9ed] flex items-center justify-end gap-3">
+            <div className="pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => {
                   void stopCamera();
                   onClose();
                 }}
-                className="px-4 sm:px-5 py-3 rounded-xl border border-[#e8e9ed] text-xs sm:text-sm font-bold text-[#5c647b] hover:bg-[#f8f9fc] transition-all cursor-pointer"
+                className="px-4 sm:px-5 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#121927] text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#1E293B] transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 sm:px-6 py-3 rounded-xl bg-[#00acee] hover:bg-[#0099d4] text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                className="px-5 sm:px-6 py-3 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer active:scale-95 flex items-center gap-2 disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{isSubmitting ? 'Guardando...' : t('guardar_simcard')}</span>

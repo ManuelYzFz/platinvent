@@ -390,25 +390,145 @@ export async function saveDevice(dev: Body) {
   });
 }
 
+/** Elimina un dispositivo de la base de datos y libera la SIM asociada. */
+export async function deleteDevice(id?: number | string, devIdno?: string) {
+  return withTransaction(async (conn) => {
+    let existing: RowDataPacket | null = null;
+    if (id !== undefined && id !== null && /^\d+$/.test(String(id).trim())) {
+      const [rows] = await conn.query<RowDataPacket[]>('SELECT * FROM devices WHERE id = ? LIMIT 1', [Number(id)]);
+      existing = rows[0] ?? null;
+    }
+    if (!existing && devIdno && String(devIdno).trim()) {
+      const [rows] = await conn.query<RowDataPacket[]>('SELECT * FROM devices WHERE devidno = ? LIMIT 1', [String(devIdno).trim()]);
+      existing = rows[0] ?? null;
+    }
+
+    if (!existing) {
+      throw new Error('Dispositivo no encontrado');
+    }
+
+    // Si tiene SIM asociada, desmarcarla como instalada
+    if (existing.simcard_id) {
+      await conn.query('UPDATE simcards SET install = 0 WHERE id = ?', [existing.simcard_id]);
+    }
+
+    await conn.query('DELETE FROM devices WHERE id = ?', [existing.id]);
+
+    return { success: true, deletedId: existing.id, devidno: existing.devidno };
+  });
+}
+
 // ---------------------------------------------------------------------------
-// Opciones de marca / modelo (valores ya ingresados en devices)
+// Opciones de marca / modelo (Catálogo y CRUD)
 // ---------------------------------------------------------------------------
 
 export async function listDeviceOptions() {
-  const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT DISTINCT TRIM(brand) AS brand, TRIM(model) AS model
-       FROM devices
-      WHERE brand IS NOT NULL AND TRIM(brand) <> ''
-      ORDER BY brand, model`
-  );
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT DISTINCT TRIM(brand) AS brand, TRIM(model) AS model
+         FROM (
+           SELECT brand, model FROM device_models
+           UNION
+           SELECT brand, model FROM devices WHERE brand IS NOT NULL AND TRIM(brand) <> ''
+         ) AS combined
+        WHERE brand IS NOT NULL AND TRIM(brand) <> ''
+        ORDER BY brand, model`
+    );
 
-  const brands = new Map<string, string>();
-  const models: { brand: string; model: string }[] = [];
-  for (const r of rows) {
-    const key = String(r.brand).toLowerCase();
-    if (!brands.has(key)) brands.set(key, r.brand);
-    if (r.model) models.push({ brand: brands.get(key)!, model: r.model });
+    const brands = new Map<string, string>();
+    const models: { brand: string; model: string }[] = [];
+    for (const r of rows) {
+      const key = String(r.brand).toLowerCase();
+      if (!brands.has(key)) brands.set(key, r.brand);
+      if (r.model && String(r.model).trim()) {
+        models.push({ brand: brands.get(key)!, model: String(r.model).trim() });
+      }
+    }
+
+    return { brands: Array.from(brands.values()), models };
+  } catch (error) {
+    console.error('Error listDeviceOptions (fallback to devices):', error);
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT DISTINCT TRIM(brand) AS brand, TRIM(model) AS model
+         FROM devices
+        WHERE brand IS NOT NULL AND TRIM(brand) <> ''
+        ORDER BY brand, model`
+    );
+    const brands = new Map<string, string>();
+    const models: { brand: string; model: string }[] = [];
+    for (const r of rows) {
+      const key = String(r.brand).toLowerCase();
+      if (!brands.has(key)) brands.set(key, r.brand);
+      if (r.model) models.push({ brand: brands.get(key)!, model: r.model });
+    }
+    return { brands: Array.from(brands.values()), models };
   }
+}
 
-  return { brands: Array.from(brands.values()), models };
+export async function addBrandModel(brand: string, model = '') {
+  const cleanBrand = brand.trim();
+  const cleanModel = model.trim();
+  if (!cleanBrand) throw new Error('El nombre de la marca es obligatorio');
+
+  await pool.query(
+    'INSERT IGNORE INTO device_models (brand, model) VALUES (?, ?)',
+    [cleanBrand, cleanModel]
+  );
+  return listDeviceOptions();
+}
+
+export async function updateBrand(oldBrand: string, newBrand: string) {
+  const cleanOld = oldBrand.trim();
+  const cleanNew = newBrand.trim();
+  if (!cleanOld || !cleanNew) throw new Error('Los nombres de marca son requeridos');
+
+  await withTransaction(async (conn) => {
+    await conn.query('UPDATE device_models SET brand = ? WHERE LOWER(brand) = LOWER(?)', [cleanNew, cleanOld]);
+    await conn.query('UPDATE devices SET brand = ? WHERE LOWER(brand) = LOWER(?)', [cleanNew, cleanOld]);
+  });
+
+  return listDeviceOptions();
+}
+
+export async function updateModel(brand: string, oldModel: string, newModel: string) {
+  const cleanBrand = brand.trim();
+  const cleanOld = oldModel.trim();
+  const cleanNew = newModel.trim();
+  if (!cleanBrand || !cleanOld || !cleanNew) throw new Error('Marca y modelos son requeridos');
+
+  await withTransaction(async (conn) => {
+    await conn.query(
+      'UPDATE device_models SET model = ? WHERE LOWER(brand) = LOWER(?) AND LOWER(model) = LOWER(?)',
+      [cleanNew, cleanBrand, cleanOld]
+    );
+    await conn.query(
+      'UPDATE devices SET model = ? WHERE LOWER(brand) = LOWER(?) AND LOWER(model) = LOWER(?)',
+      [cleanNew, cleanBrand, cleanOld]
+    );
+  });
+
+  return listDeviceOptions();
+}
+
+export async function deleteModel(brand: string, model: string) {
+  const cleanBrand = brand.trim();
+  const cleanModel = model.trim();
+  if (!cleanBrand || !cleanModel) throw new Error('Marca y modelo son requeridos');
+
+  await pool.query(
+    'DELETE FROM device_models WHERE LOWER(brand) = LOWER(?) AND LOWER(model) = LOWER(?)',
+    [cleanBrand, cleanModel]
+  );
+  return listDeviceOptions();
+}
+
+export async function deleteBrand(brand: string) {
+  const cleanBrand = brand.trim();
+  if (!cleanBrand) throw new Error('Marca es requerida');
+
+  await pool.query(
+    'DELETE FROM device_models WHERE LOWER(brand) = LOWER(?)',
+    [cleanBrand]
+  );
+  return listDeviceOptions();
 }

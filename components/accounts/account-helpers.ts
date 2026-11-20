@@ -20,6 +20,6 @@ export function getRoleLabel(role: UserRole): string {
 }
 
 export const INPUT_CLASS =
-  'w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#e8e9ed] dark:border-[#30363d] bg-white dark:bg-[#0d1117] text-[#3a435d] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#00acee]';
+  'w-full px-3.5 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0F1726] text-slate-900 dark:text-white focus:outline-none focus:border-[#00A3E0] focus:ring-1 focus:ring-[#00A3E0] transition-all shadow-2xs';
 
-export const LABEL_CLASS = 'block text-xs font-bold text-[#3a435d] dark:text-gray-300 uppercase mb-1';
+export const LABEL_CLASS = 'block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5';

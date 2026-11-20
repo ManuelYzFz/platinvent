@@ -48,10 +48,10 @@ export default function AccountsView({ currentUsername }: AccountsViewProps) {
               Módulo Superadmin
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#3a435d] dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Gestión de Cuentas y Accesos
           </h1>
-          <p className="text-xs sm:text-sm text-[#5c647b] dark:text-gray-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Crea y administra los usuarios con permisos personalizados (Superadmin, Administrador y Solo Lectura).
           </p>
         </div>
@@ -62,7 +62,7 @@ export default function AccountsView({ currentUsername }: AccountsViewProps) {
             setErrorBanner('');
             setIsCreateOpen(true);
           }}
-          className="flex items-center justify-center gap-2 rounded-xl bg-[#00acee] hover:bg-[#0099d4] px-5 py-3 text-sm sm:text-base font-extrabold text-white shadow-sm transition-all cursor-pointer hover:shadow active:scale-95 border border-[#00acee] shrink-0"
+          className="flex items-center justify-center gap-2 rounded-xl bg-[#00A3E0] hover:bg-[#0092c8] px-5 py-3 text-sm sm:text-base font-bold text-white shadow-sm transition-all cursor-pointer hover:shadow active:scale-95 border border-[#00A3E0] shrink-0"
         >
           <UserPlus className="w-5 h-5 text-white shrink-0" />
           <span>Crear Nueva Cuenta</span>

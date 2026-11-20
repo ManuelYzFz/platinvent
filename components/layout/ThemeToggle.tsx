@@ -7,15 +7,15 @@ import { useTranslation } from '@/lib/i18n';
 export type Theme = 'light' | 'dark';
 
 export function getPreferredTheme(): Theme {
-  if (typeof window === 'undefined') return 'light';
+  if (typeof window === 'undefined') return 'dark';
   try {
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme === 'dark' || storedTheme === 'light') {
       return storedTheme;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'dark';
   } catch {
-    return 'light';
+    return 'dark';
   }
 }
 
@@ -23,8 +23,9 @@ export function applyTheme(theme: Theme) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
 
-  // Atributo Bootstrap 5 y clase Tailwind
+  // Atributo Bootstrap 5, ProyectoFactura y clase Tailwind
   root.setAttribute('data-bs-theme', theme);
+  root.setAttribute('data-theme', theme);
   if (theme === 'dark') {
     root.classList.add('dark');
   } else {

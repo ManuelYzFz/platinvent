@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PwaManager from "@/components/pwa/PwaManager";
+import { ToastProvider } from "@/components/common/Toast";
 import { APP_METADATA } from "@/lib/constants";
 
 const geistSans = Geist({
@@ -41,7 +42,8 @@ export default function RootLayout({
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-bs-theme="dark"
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script
@@ -51,7 +53,7 @@ export default function RootLayout({
                 var stored = localStorage.getItem('theme');
                 var theme = (stored === 'dark' || stored === 'light')
                   ? stored
-                  : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                  : 'dark';
                 document.documentElement.setAttribute('data-bs-theme', theme);
                 document.documentElement.style.colorScheme = theme;
                 if (theme === 'dark') {
@@ -81,7 +83,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="min-h-full flex flex-col font-sans">
-        <div className="flex-1">{children}</div>
+        <ToastProvider>
+          <div className="flex-1">{children}</div>
+        </ToastProvider>
         <PwaManager />
       </body>
     </html>

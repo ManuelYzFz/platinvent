@@ -10,7 +10,6 @@ import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n';
 import { triggerInstallPrompt } from '@/components/pwa/PwaManager';
 import { useUserRole } from '@/lib/utils/useUserRole';
-import SyncIndicator from './SyncIndicator';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -85,39 +84,41 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
 
       {/* Drawer Lateral Desplegable (fijado top-0 bottom-0 y con fondo continuo) */}
       <aside 
-        className="fixed top-0 bottom-0 left-0 h-dvh w-[85vw] max-w-xs sm:w-80 bg-white dark:bg-[#161B22] z-50 shadow-2xl flex flex-col border-r border-[#e8e9ed] dark:border-[#30363d] animate-in slide-in-from-left duration-200 font-sans overscroll-contain select-none"
+        className="fixed top-0 bottom-0 left-0 h-dvh w-[85vw] max-w-xs sm:w-80 bg-white dark:bg-[#0B111E] z-50 shadow-2xl flex flex-col border-r border-[#E2E8F0] dark:border-white/10 animate-in slide-in-from-left duration-200 font-sans overscroll-contain select-none transition-colors"
         style={{ touchAction: 'pan-y' }}
       >
-
         
-        {/* Encabezado del Menú */}
-        <div className="sidebar-header h-20 px-5 sm:px-6 border-b border-[#e8e9ed] dark:border-[#30363d] flex items-center justify-between shrink-0 bg-white dark:bg-[#121212]!">
+        {/* Encabezado del Menú estilo VTRAXX */}
+        <div className="sidebar-header h-18 sm:h-20 px-5 sm:px-6 border-b border-[#E2E8F0] dark:border-white/10 flex items-center justify-between shrink-0 bg-[#F8FAFC] dark:bg-[#121927]">
           <div className="flex items-center gap-3">
             <Image
-              src="/images/logo.png"
-              alt="Logo"
-              width={150}
-              height={40}
-              className="h-9 sm:h-11 w-auto object-contain"
-              style={{ width: 'auto' }}
+              src="/images/VtraxxOscuro.png"
+              alt="VTRAXX"
+              width={140}
+              height={36}
+              className="h-8 sm:h-9 w-auto object-contain dark:hidden"
             />
-            <span className="text-base sm:text-lg font-extrabold text-[#3a435d] dark:text-white uppercase tracking-wider">
-              {t('menu')}
-            </span>
+            <Image
+              src="/images/VtraxxBlanco.png"
+              alt="VTRAXX"
+              width={140}
+              height={36}
+              className="h-8 sm:h-9 w-auto object-contain hidden dark:block"
+            />
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 sm:p-2.5 rounded-xl text-[#5c647b] hover:text-[#3a435d] hover:bg-[#f2f3f7] dark:text-gray-300 dark:hover:text-white dark:hover:bg-[#282e38] transition-colors cursor-pointer border border-[#e8e9ed] dark:border-[#30363d]"
+            className="p-2 sm:p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-[#E2E8F0] dark:text-slate-300 dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors cursor-pointer border border-[#E2E8F0] dark:border-white/15"
             title="Cerrar menú"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
         {/* Opciones del Menú */}
         <div className="flex-1 p-3.5 sm:p-5 space-y-3 overflow-y-auto scrollbar-thin">
-          <div className="px-3.5 py-1.5 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#5c647b] dark:text-gray-400">
+          <div className="px-3.5 py-1.5 text-xs sm:text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400">
             {t('navegacion_principal')}
           </div>
 
@@ -126,39 +127,39 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
             <button
               type="button"
               onClick={() => setIsDashboardOpen((prev) => !prev)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-base sm:text-lg font-bold transition-all cursor-pointer ${
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm sm:text-base font-bold transition-all cursor-pointer ${
                 isDashboardSection
-                     ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] shadow-xs'
-                     : 'text-[#3a435d] dark:text-gray-300 hover:bg-[#f8f9fc] dark:hover:bg-[#21262d] hover:text-[#00acee] dark:hover:text-[#38bdf8]'
+                     ? 'bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] border border-[#00A3E0]/30 shadow-xs'
+                     : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#162032] hover:text-[#00A3E0] dark:hover:text-[#00A3E0]'
               }`}
             >
-              <div className="flex items-center gap-3.5">
-                <LayoutDashboard className={`w-6 h-6 shrink-0 ${isDashboardSection ? 'text-emerald-500' : 'text-[#5c647b] dark:text-gray-400'}`} />
+              <div className="flex items-center gap-3">
+                <LayoutDashboard className={`w-5 h-5 shrink-0 ${isDashboardSection ? 'text-[#00A3E0]' : 'text-slate-400'}`} />
                 <span>{t('dashboard')}</span>
               </div>
               <ChevronDown
-                className={`w-5 h-5 transition-transform duration-200 ${
+                className={`w-4 h-4 transition-transform duration-200 ${
                   isDashboardOpen ? '' : '-rotate-90'
-                } ${isDashboardSection ? 'text-[#00acee] dark:text-[#38bdf8]' : 'text-gray-400 dark:text-gray-500'}`}
+                } ${isDashboardSection ? 'text-[#00A3E0]' : 'text-slate-400'}`}
               />
             </button>
 
             {/* HIJOS DESPLEGABLES DENTRO DE DASHBOARD */}
             {isDashboardOpen && (
-              <div className="ml-4 pl-3 border-l-2 border-[#e8e9ed] dark:border-[#30363d] space-y-1.5 pt-1">
+              <div className="ml-4 pl-3 border-l-2 border-[#E2E8F0] dark:border-white/15 space-y-1.5 pt-1">
                 
                 {/* HIJO 1: Dispositivo */}
                 <Link
                   href="/dispositivos"
                   prefetch={true}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm sm:text-base font-bold transition-all ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     isDispositivosPath
-                      ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] font-extrabold'
-                      : 'text-[#3a435d] dark:text-gray-300 hover:bg-[#f8f9fc] dark:hover:bg-[#21262d] hover:text-[#00acee] dark:hover:text-[#38bdf8]'
+                      ? 'bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] border border-[#00A3E0]/30 font-extrabold'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#162032] hover:text-[#00A3E0] dark:hover:text-[#00A3E0]'
                   }`}
                 >
-                  <HardDrive className={`w-5 h-5 sm:w-6 sm:h-6 shrink-0 ${isDispositivosPath ? 'text-[#00acee] dark:text-[#38bdf8]' : 'text-[#5c647b] dark:text-gray-400'}`} />
+                  <HardDrive className={`w-4 h-4 shrink-0 ${isDispositivosPath ? 'text-[#00A3E0]' : 'text-slate-400'}`} />
                   <span>{t('dispositivo')}</span>
                 </Link>
 
@@ -167,13 +168,13 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
                   href="/simcards"
                   prefetch={true}
                   onClick={onClose}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm sm:text-base font-bold transition-all ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                     isSimCardsPath
-                      ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] font-extrabold'
-                      : 'text-[#3a435d] dark:text-gray-300 hover:bg-[#f8f9fc] dark:hover:bg-[#21262d] hover:text-[#00acee] dark:hover:text-[#38bdf8]'
+                      ? 'bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] border border-[#00A3E0]/30 font-extrabold'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#162032] hover:text-[#00A3E0] dark:hover:text-[#00A3E0]'
                   }`}
                 >
-                  <Radio className={`w-5 h-5 sm:w-6 sm:h-6 shrink-0 ${isSimCardsPath ? 'text-[#00acee] dark:text-[#38bdf8]' : 'text-[#5c647b] dark:text-gray-400'}`} />
+                  <Radio className={`w-4 h-4 shrink-0 ${isSimCardsPath ? 'text-[#00A3E0]' : 'text-slate-400'}`} />
                   <span>{t('tarjeta_sim')}</span>
                 </Link>
 
@@ -186,13 +187,13 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
           <Link
             href="/informes"
             onClick={onClose}
-            className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-base sm:text-lg font-bold transition-all ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm sm:text-base font-bold transition-all ${
               pathname === '/informes'
-                ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] shadow-xs'
-                : 'text-[#3a435d] dark:text-gray-300 hover:bg-[#f8f9fc] dark:hover:bg-[#21262d] hover:text-[#00acee] dark:hover:text-[#38bdf8]'
+                ? 'bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] border border-[#00A3E0]/30 shadow-xs'
+                : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#162032] hover:text-[#00A3E0] dark:hover:text-[#00A3E0]'
             }`}
           >
-            <BarChart3 className={`w-6 h-6 shrink-0 ${pathname === '/informes' ? 'text-[#00acee] dark:text-[#38bdf8]' : 'text-[#5c647b] dark:text-gray-400'}`} />
+            <BarChart3 className={`w-5 h-5 shrink-0 ${pathname === '/informes' ? 'text-[#00A3E0]' : 'text-slate-400'}`} />
             <span>{t('informes')}</span>
           </Link>
 
@@ -201,18 +202,18 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
             <Link
               href="/cuentas"
               onClick={onClose}
-              className={`flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-base sm:text-lg font-bold transition-all ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm sm:text-base font-bold transition-all ${
                 pathname === '/cuentas'
-                  ? 'bg-[#00acee]/10 dark:bg-[#00acee]/20 text-[#00acee] dark:text-[#38bdf8] shadow-xs'
-                  : 'text-[#3a435d] dark:text-gray-300 hover:bg-[#f8f9fc] dark:hover:bg-[#21262d] hover:text-[#00acee] dark:hover:text-[#38bdf8]'
+                  ? 'bg-[#00A3E0]/15 dark:bg-[#00A3E0]/20 text-[#00A3E0] dark:text-[#00A3E0] border border-[#00A3E0]/30 shadow-xs'
+                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#162032] hover:text-[#00A3E0] dark:hover:text-[#00A3E0]'
               }`}
             >
-              <Users className={`w-6 h-6 shrink-0 ${pathname === '/cuentas' ? 'text-[#00acee] dark:text-[#38bdf8]' : 'text-[#5c647b] dark:text-gray-400'}`} />
+              <Users className={`w-5 h-5 shrink-0 ${pathname === '/cuentas' ? 'text-[#00A3E0]' : 'text-slate-400'}`} />
               <span>{t('cuentas') || 'Cuentas'}</span>
             </Link>
           )}
 
-          {/* OPCIÓN 4: INSTALAR APP PWA (Visible en navegadores para instalar cuando el usuario lo desee) */}
+          {/* OPCIÓN 5: INSTALAR APP PWA */}
           {!isStandalone && (
             <button
               type="button"
@@ -220,23 +221,13 @@ function SidebarContent({ isOpen, onClose }: SidebarProps) {
                 onClose();
                 await triggerInstallPrompt();
               }}
-              className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-base sm:text-lg font-bold text-[#00acee] bg-[#00acee]/10 hover:bg-[#00acee]/20 transition-all cursor-pointer border border-[#00acee]/30 shadow-2xs mt-3 text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm sm:text-base font-bold text-[#00A3E0] bg-[#00A3E0]/10 hover:bg-[#00A3E0]/20 transition-all cursor-pointer border border-[#00A3E0]/30 shadow-2xs mt-3 text-left"
             >
-              <Smartphone className="w-6 h-6 shrink-0 text-[#00acee]" />
+              <Smartphone className="w-5 h-5 shrink-0 text-[#00A3E0]" />
               <span>{t('instalar_app')}</span>
             </button>
           )}
 
-        </div>
-
-        {/* Footer del Menú: Indicador de Sincronización + Versión */}
-        <div className="sidebar-footer p-4 sm:p-5 border-t border-[#e8e9ed] dark:border-[#30363d] bg-[#f8f9fc] dark:bg-[#121212]! shrink-0 space-y-3">
-          <div className="w-full flex items-center">
-            <SyncIndicator />
-          </div>
-          <div className="text-xs sm:text-sm text-[#5c647b] dark:text-gray-400 font-semibold">
-            {t('version')}
-          </div>
         </div>
       </aside>
     </div>
